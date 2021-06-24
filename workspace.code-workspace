@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "air_meter_server",
+			"path": "."
+		}
+	],
+	"settings": {
+		"conventionalCommits.scopes": [
+			"project"
+		]
+	}
+}

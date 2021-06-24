@@ -1,0 +1,16 @@
+## sensor thread
+    1. connect to webserver websocket for sensor
+    2. on loop send sensor data and detect wether to reinitialise ccs811 assign to context property
+    3. seperate thread that can delete and reinitialise sensor thread context property based on http GET request
+## web server
+    0. on startup start sensor thread
+    1. setup actix server
+    2. receive air_meter_node requests via websockets
+        2.note - provision for db based config response for node (increment, restart)
+    3. serve web_client requests with Askama template
+    4. support websocket requests for air_meter
+    5. serve web_client with template that requests react_app
+    6. add to system startup (singleton)
+    7. adjustable reading increment
+    8. visually indicate sensor warmup based on sensor uptime
+    9. change heartbeat to ~30 minutes - then indicate sensor client may have crashed based no heartbeat from client after 5 minutes
