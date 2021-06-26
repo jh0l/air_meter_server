@@ -102,7 +102,7 @@ pub struct RelayServer {
 
 fn do_send_log(addr: &actix::Recipient<Message>, message: &str) {
     if let Err(err) = addr.do_send(Message(message.to_owned())) {
-        println!("do_send error: {:?}", err)
+        println!("[srv/m] do_send error: {:?}", err)
     }
 }
 
@@ -123,14 +123,14 @@ impl RelayServer {
         if let Some(addr) = self.sessions.get(session_id) {
             do_send_log(addr, message);
         }
-        println!("error: session {} doesnt exist", session_id);
+        println!("[srv/m] error: session {} doesnt exist", session_id);
     }
 
     // Assign subscription entry to incoming address through publisher id
     // Create subscription entry if None
     fn connect_publisher(&mut self, msg: Connect) -> usize {
         let Connect { ses_role, .. } = msg;
-        println!("{:?} PUBLISHER CONNECTED", ses_role);
+        println!("[srv/m] {:?} PUBLISHER CONNECTED", ses_role);
 
         // remove existing address if some exists
         if let Some(addr) = self.sessions.get(&ses_role.into()) {
@@ -158,7 +158,7 @@ impl Handler<Connect> for RelayServer {
     type Result = usize;
 
     fn handle(&mut self, msg: Connect, _: &mut Context<Self>) -> Self::Result {
-        println!("{:?}", msg);
+        println!("[srv/m] {:?}", msg);
 
         self.visitor_count.fetch_add(1, Ordering::SeqCst);
 
@@ -177,11 +177,11 @@ impl Handler<Connect> for RelayServer {
 impl Handler<Disconnect> for RelayServer {
     type Result = ();
     fn handle(&mut self, msg: Disconnect, _: &mut Context<Self>) {
-        println!("{:?}", msg);
+        println!("[srv/m] {:?}", msg);
 
         // remove address
         if self.sessions.get(&msg.ses_id).is_some() {
-            println!("{:?} REMOVED", msg);
+            println!("[srv/m] {:?} REMOVED", msg);
             // remove session from all subscriptions
             for sessions in &mut self.subs.values_mut() {
                 sessions.remove(&msg.ses_id);
@@ -196,12 +196,12 @@ impl Handler<PublisherMessage> for RelayServer {
 
     fn handle(&mut self, msg: PublisherMessage, _: &mut Context<Self>) {
         if let Some(sessions) = self.subs.get(&msg.pub_id) {
-            println!("{:?}", msg);
+            println!("[srv/m] {:?}", msg);
             for user_id in sessions {
                 self.message_session(user_id, msg.msg.as_str());
             }
         } else {
-            println!("UNKNOWN PUBLISHER {}", msg.pub_id);
+            println!("[srv/m] UNKNOWN PUBLISHER {}", msg.pub_id);
         }
     }
 }

@@ -28,11 +28,8 @@ pub struct WsSession {
     server_addr: Addr<relay_server::RelayServer>,
     ses_role: Role,
 }
-
-/// How often heartbeat pings are sent
-const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
-/// How long before lack of client response causes a timeout
-const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
+pub const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(30);
+pub const CLIENT_TIMEOUT: Duration = Duration::from_secs(60);
 
 impl WsSession {
     // helper method that sends intermittent ping to client
@@ -42,7 +39,7 @@ impl WsSession {
             // check client hearbeats
             if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
                 // heartbeat timed out
-                println!("{:?} TIMED OUT, DISCONNECTING", act.ses_role);
+                println!("[srv/s] {:?} TIMED OUT, DISCONNECTING", act.ses_role);
 
                 // notify chat server
                 act.server_addr.do_send(relay_server::Disconnect {
@@ -78,7 +75,7 @@ impl WsSession {
                         // handle join command
                         match serde_json::from_slice::<Join>(v[1].as_bytes()) {
                             Ok(cmd) => {
-                                println!("{:?}", cmd)
+                                println!("[srv/s] {:?}", cmd)
                             }
                             Err(err) => {
                                 return Err(format!("error: `{}` `{:?}`", m, err));
@@ -133,7 +130,7 @@ impl Actor for WsSession {
                     Ok(res) => act.ses_role = act.ses_role.replace(res),
                     // something wrong
                     Err(err) => {
-                        println!("WS CONNECT ERROR: {:?}", err);
+                        println!("[srv/s] WS CONNECT ERROR: {:?}", err);
                         ctx.stop();
                     }
                 }
@@ -143,7 +140,7 @@ impl Actor for WsSession {
     }
 
     fn stopping(&mut self, _: &mut Self::Context) -> Running {
-        println!("{:?} WS SESSION STOPPING", self.ses_role);
+        println!("[srv/s] {:?} WS SESSION STOPPING", self.ses_role);
         // notify relay server
         self.server_addr.do_send(relay_server::Disconnect {
             ses_id: self.ses_role.into(),
@@ -157,14 +154,14 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsSession {
     fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
         let msg = match msg {
             Err(err) => {
-                println!("RECEIVED ERROR FROM WS CLIENT {:?}", err);
+                println!("[srv/s] RECEIVED ERROR FROM WS CLIENT {:?}", err);
                 ctx.stop();
                 return;
             }
             Ok(msg) => msg,
         };
 
-        println!("FROM CLIENT: {:?}", msg);
+        println!("[srv/s] {:?}: {:?}", self.ses_role, msg);
         match msg {
             ws::Message::Ping(msg) => {
                 self.hb = Instant::now();
@@ -176,7 +173,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsSession {
                     ctx.text(err);
                 });
             }
-            ws::Message::Binary(_) => println!("Unexpected binary"),
+            ws::Message::Binary(_) => println!("[srv/s] Unexpected binary"),
             ws::Message::Close(reason) => {
                 ctx.close(reason);
                 ctx.stop();
@@ -197,12 +194,12 @@ pub async fn ws_route(
             Ok(ses_id_str) => match ses_id_str.parse::<usize>() {
                 Ok(ses_id) => Ok(Role::Publisher(ses_id)),
                 Err(err) => {
-                    println!("{:?}", err);
+                    println!("[srv/s] {:?}", err);
                     Err(format!("couldn't parse {}", ses_id_str))
                 }
             },
             Err(err) => {
-                println!("{:?}", err);
+                println!("[srv/s] {:?}", err);
                 Err("couldn't convert auth header to string".to_owned())
             }
         },
