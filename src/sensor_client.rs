@@ -1,8 +1,8 @@
 use std::time::Duration;
 use std::{io, thread};
 
-use actix::*;
 use actix::io::SinkWrite;
+use actix::*;
 use actix_codec::Framed;
 use awc::{
     error::WsProtocolError,
@@ -38,7 +38,6 @@ impl Actor for SensorClient {
     }
 }
 
-
 /// Handle stdin commands
 impl Handler<SensorReading> for SensorClient {
     type Result = ();
@@ -56,12 +55,12 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for SensorClient {
         }
     }
 
-    fn started(&mut self, _ctx: &mut Context<Self>) {
-        println!("Connected");
+    fn started(&mut self, _: &mut Context<Self>) {
+        println!("WS Client Connected");
     }
 
     fn finished(&mut self, ctx: &mut Context<Self>) {
-        println!("Server disconnected");
+        println!("WS Client Disconnected");
         ctx.stop()
     }
 }
@@ -90,6 +89,7 @@ impl SensorClient {
             url.push_str("/ws/");
             let (response, framed) = Client::new()
                 .ws(url)
+                .set_header("authorization", "811")
                 .connect()
                 .await
                 .map_err(|e| {
@@ -100,7 +100,9 @@ impl SensorClient {
             let (sink, stream) = framed.split();
             let addr = SensorClient::create(|ctx| {
                 SensorClient::add_stream(stream, ctx);
-                SensorClient {sink: SinkWrite::new(sink, ctx)}
+                SensorClient {
+                    sink: SinkWrite::new(sink, ctx),
+                }
             });
 
             // start sensor reading loop
