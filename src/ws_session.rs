@@ -10,6 +10,18 @@ use actix_web::{web, Error, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
 
 use crate::relay_server;
+use relay_server::Role;
+
+use serde::{Deserialize, Serialize};
+
+// commands
+/// Join subscription, (ses_id refers to session to subscribe to, client ses_id already known)
+#[derive(Message, Debug, Deserialize, Serialize)]
+#[rtype(result = "()")]
+pub struct Join {
+    /// session id
+    pub ses_id: usize,
+}
 
 pub struct WsSession {
     // hb increment
@@ -61,9 +73,25 @@ impl WsSession {
                 });
             }
             Role::Subscriber(_) => {
-        // check for publisher commands
-    }
-}
+                let m = text.trim();
+                // parse command
+                let v: Vec<&str> = m.splitn(2, ' ').collect();
+                match v[0] {
+                    "/join" => {
+                        // handle join command
+                        match serde_json::from_slice::<Join>(v[1].as_bytes()) {
+                            Ok(cmd) => {
+                                println!("{:?}", cmd)
+                            }
+                            Err(err) => {
+                                return Err(format!("error: `{}` `{:?}`", m, err));
+                            }
+                        }
+                    }
+                    _ => {
+                        panic!("unimplemented");
+                    }
+                }
             }
         };
         Ok(())
@@ -96,14 +124,16 @@ impl Actor for WsSession {
         // HttpContext::state() is instance of WsSession, state is shared
         // across all routes within application
         let addr = ctx.address();
+
         self.server_addr
             .send(relay_server::Connect {
+                ses_role: self.ses_role,
                 addr: addr.recipient(),
             })
             .into_actor(self)
             .then(|res, act, ctx| {
                 match res {
-                    Ok(res) => act.ses_id = res,
+                    Ok(res) => act.ses_role = act.ses_role.replace(res),
                     // something wrong
                     Err(err) => {
                         println!("WS CONNECT ERROR: {:?}", err);
@@ -116,9 +146,11 @@ impl Actor for WsSession {
     }
 
     fn stopping(&mut self, _: &mut Self::Context) -> Running {
-        println!("{} WS SESSION STOPPING", self.ses_id);
+        println!("{:?} WS SESSION STOPPING", self.ses_role);
         // notify relay server
-        self.server_addr.do_send(relay_server::Disconnect { ses_id: self.ses_id });
+        self.server_addr.do_send(relay_server::Disconnect {
+            ses_id: self.ses_role.into(),
+        });
         Running::Stop
     }
 }
@@ -139,14 +171,18 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsSession {
             Ok(msg) => msg,
         };
 
-        println!("WEBSOCKET MESSAGE: {:?}", msg);
+        println!("FROM CLIENT: {:?}", msg);
         match msg {
             ws::Message::Ping(msg) => {
                 self.hb = Instant::now();
                 ctx.ping(&msg);
             }
             ws::Message::Pong(_) => self.hb = Instant::now(),
-            ws::Message::Text(text) => self.handle_client_message(&text, ctx),
+            ws::Message::Text(text) => {
+                self.parse_message(&text, ctx).unwrap_or_else(|err| {
+                    ctx.text(err);
+                });
+            }
             ws::Message::Binary(_) => println!("Unexpected binary"),
             ws::Message::Close(reason) => { ctx.close(reason); ctx.stop(); },
             ws::Message::Continuation(_) => ctx.stop(),

@@ -100,6 +100,12 @@ pub struct RelayServer {
     visitor_count: Arc<AtomicUsize>,
 }
 
+fn do_send_log(addr: &actix::Recipient<Message>, message: &str) {
+    if let Err(err) = addr.do_send(Message(message.to_owned())) {
+        println!("do_send error: {:?}", err)
+    }
+}
+
 impl RelayServer {
     pub fn new(visitor_count: Arc<AtomicUsize>) -> RelayServer {
         // default subscription?
