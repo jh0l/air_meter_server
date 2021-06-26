@@ -6,15 +6,18 @@ default-run = "server"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[workspace]
+
 [[bin]]
 name = "server"
-path = "src/bin/main.rs"
+path = "src/main.rs"
 
 [[bin]]
 name = "client"
-path = "src/bin/cli_client.rs"
+path = "src/cli_client.rs"
 
 [dependencies]
+library = { path = "library" }
 actix = "0.10"
 actix-codec = "0.3"
 actix-web = "3"

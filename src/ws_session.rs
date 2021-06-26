@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use actix::*;
 use actix_web::{error, web, Error, HttpRequest, HttpResponse};
@@ -9,6 +9,8 @@ use crate::relay_server;
 use relay_server::Role;
 
 use serde::{Deserialize, Serialize};
+
+use library::{CLIENT_TIMEOUT, HEARTBEAT_INTERVAL};
 
 // commands
 /// Join subscription, (ses_id refers to session to subscribe to, client ses_id already known)
@@ -28,8 +30,6 @@ pub struct WsSession {
     server_addr: Addr<relay_server::RelayServer>,
     ses_role: Role,
 }
-pub const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(30);
-pub const CLIENT_TIMEOUT: Duration = Duration::from_secs(60);
 
 impl WsSession {
     // helper method that sends intermittent ping to client

@@ -1,5 +1,4 @@
 //! Simple websocket client.
-use std::time::{Duration, Instant};
 use std::{io, thread};
 
 use actix::io::SinkWrite;
@@ -12,7 +11,8 @@ use awc::{
 };
 use bytes::Bytes;
 use futures::stream::{SplitSink, StreamExt};
-pub const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(30);
+
+use library::HEARTBEAT_INTERVAL;
 
 fn main() {
     ::std::env::set_var("RUST_LOG", "actix_web=info");
