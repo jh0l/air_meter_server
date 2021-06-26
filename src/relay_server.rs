@@ -14,6 +14,30 @@ use std::sync::{
 
 use std::collections::{HashMap, HashSet};
 
+#[derive(Copy, Clone, Debug)]
+pub enum Role {
+    Publisher(usize),
+    Subscriber(usize),
+}
+
+impl Into<usize> for Role {
+    fn into(self) -> usize {
+        match self {
+            Role::Publisher(id) => id,
+            Role::Subscriber(id) => id,
+        }
+    }
+}
+impl Role {
+    // replace the id value property of the enum while persisting enum value
+    pub fn replace(self, id: usize) -> Role {
+        match self {
+            Role::Subscriber(_) => Role::Subscriber(id),
+            Role::Publisher(_) => Role::Publisher(id),
+        }
+    }
+}
+
 // client events for relay server communications
 
 /// server sends this message to session
@@ -22,17 +46,10 @@ use std::collections::{HashMap, HashSet};
 pub struct Message(pub String);
 
 /// New client session with relay server is created
-#[derive(Message)]
+#[derive(Message, Clone, Debug)]
 #[rtype(usize)]
 pub struct Connect {
-    pub addr: Recipient<Message>,
-}
-
-/// New publisher session with relay server is created, assert subscription
-#[derive(Message)]
-#[rtype(result = "()")]
-pub struct PublisherConnect {
-    pub pub_id: usize,
+    pub ses_role: Role,
     pub addr: Recipient<Message>,
 }
 
@@ -44,13 +61,13 @@ pub struct Disconnect {
 }
 
 /// Send message to specific subscription (used by publisher)
-#[derive(Message)]
+#[derive(Message, Debug)]
 #[rtype(result = "()")]
 pub struct PublisherMessage {
     /// Peer message
     pub msg: String,
-    /// subscription id
-    pub sub_id: usize,
+    /// publisher id
+    pub pub_id: usize,
 }
 
 /// List of available subscriptions
@@ -96,22 +113,30 @@ impl RelayServer {
         }
     }
 
-    fn message_session(&self, session_id: &usize, message: &str) -> Result<(), SendError<Message>> {
+    fn message_session(&self, session_id: &usize, message: &str) {
         if let Some(addr) = self.sessions.get(session_id) {
-            return addr.do_send(Message(message.to_owned()));
+            do_send_log(addr, message);
         }
-        Err(SendError::Closed(Message(message.to_owned())))
+        println!("error: session {} doesnt exist", session_id);
     }
 
-    // send message to subscribers
-    fn publish_message(&self, pub_id: &usize, message: &str) {
-        if let Some(sessions) = self.subs.get(pub_id) {
-            for user_id in sessions {
-                self.message_session(user_id, message);
-            }
-        } else {
-            println!("UNKNOWN PUBLISHER {}", pub_id);
+    // Assign subscription entry to incoming address through publisher id
+    // Create subscription entry if None
+    fn connect_publisher(&mut self, msg: Connect) -> usize {
+        let Connect { ses_role, .. } = msg;
+        println!("{:?} PUBLISHER CONNECTED", ses_role);
+
+        // remove existing address if some exists
+        if let Some(addr) = self.sessions.get(&ses_role.into()) {
+            do_send_log(addr, "disconnected");
+            self.sessions.remove(&ses_role.into());
         }
+
+        // create subscription entry if none
+        if self.subs.get(&ses_role.into()).is_none() {
+            self.subs.insert(ses_role.into(), HashSet::new());
+        };
+        ses_role.into()
     }
 }
 
@@ -127,41 +152,19 @@ impl Handler<Connect> for RelayServer {
     type Result = usize;
 
     fn handle(&mut self, msg: Connect, _: &mut Context<Self>) -> Self::Result {
-        println!("{:?} CONNECTED", msg.addr);
-
-        // register session with random id
-        let id = self.rng.gen::<usize>();
-
-        self.sessions.insert(id, msg.addr);
+        println!("{:?}", msg);
 
         self.visitor_count.fetch_add(1, Ordering::SeqCst);
 
-        id
-    }
-}
-
-// Handler for PublisherConnect message
-// Assign incoming address to session of message's pub_id
-// Create subscription entry if None
-impl Handler<PublisherConnect> for RelayServer {
-    type Result = ();
-
-    fn handle(&mut self, msg: PublisherConnect, _: &mut Context<Self>) -> Self::Result {
-        let PublisherConnect { addr, pub_id } = msg;
-        println!("{} - {:?} PUBLISHER CONNECTED", pub_id, addr);
-
-        // remove existing address if some exists
-        if let Some(addr) = self.sessions.get(&pub_id) {
-            addr.do_send(Message("disconnected".to_owned()));
-            self.sessions.remove(&pub_id);
-        }
-
-        self.sessions.insert(pub_id, msg.addr);
-
-        // create subscription entry if none
-        if let None = self.subs.get(&pub_id) {
-            self.subs.insert(pub_id, HashSet::new());
+        let id: usize = match msg.ses_role {
+            Role::Publisher(_) => {
+                self.connect_publisher(msg.clone());
+                msg.ses_role.into()
+            }
+            _ => self.rng.gen::<usize>(),
         };
+        self.sessions.insert(id, msg.addr);
+        id
     }
 }
 
@@ -187,7 +190,14 @@ impl Handler<PublisherMessage> for RelayServer {
     type Result = ();
 
     fn handle(&mut self, msg: PublisherMessage, _: &mut Context<Self>) {
-        self.publish_message(&msg.sub_id, msg.msg.as_str());
+        if let Some(sessions) = self.subs.get(&msg.pub_id) {
+            println!("{:?}", msg);
+            for user_id in sessions {
+                self.message_session(user_id, msg.msg.as_str());
+            }
+        } else {
+            println!("UNKNOWN PUBLISHER {}", msg.pub_id);
+        }
     }
 }
 

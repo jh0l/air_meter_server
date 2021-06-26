@@ -39,7 +39,7 @@ async fn main() -> std::io::Result<()> {
 
     SensorClient::spawn(ADDRESS);
 
-    HttpServer::new(|| {
+    HttpServer::new(move || {
         App::new()
             // enable logger
             .wrap(middleware::Logger::default())

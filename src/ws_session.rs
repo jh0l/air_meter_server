@@ -12,14 +12,13 @@ use actix_web_actors::ws;
 use crate::relay_server;
 
 pub struct WsSession {
-    // session id
-    ses_id: usize,
     // hb increment
     hb: Instant,
     // subscription id,
     sub_id: usize,
     // relay server
     server_addr: Addr<relay_server::RelayServer>,
+    ses_role: Role,
 }
 
 /// How often heartbeat pings are sent
@@ -53,12 +52,23 @@ impl WsSession {
 
     // helper method handles ws messages from client, parses msg then forwards
     // to appropriate relay server handler
-    fn handle_client_message(&self, text: &str, ctx: &mut ws::WebsocketContext<Self>) {
-        let m = text.trim();
+    fn parse_message(&self, text: &str, _: &mut ws::WebsocketContext<Self>) -> Result<(), String> {
+        match self.ses_role {
+            Role::Publisher(_) => {
+                self.server_addr.do_send(relay_server::PublisherMessage {
+                    msg: text.to_owned(),
+                    pub_id: self.ses_role.into(),
+                });
+            }
+            Role::Subscriber(_) => {
         // check for publisher commands
     }
 }
-
+            }
+        };
+        Ok(())
+    }
+}
 
 /// Handle messages from relay server, we simply send it to peer websocket
 impl Handler<relay_server::Message> for WsSession {
@@ -150,14 +160,33 @@ pub async fn ws_route(
     stream: web::Payload,
     srv: web::Data<Addr<relay_server::RelayServer>>,
 ) -> Result<HttpResponse, Error> {
-    ws::start(
-        WsSession {
-             ses_id: 0,
-             hb: Instant::now(),
-             sub_id: 0,
-             server_addr: srv.get_ref().clone(),
+    let role: Result<Role, String> = match req.headers().get("authorization") {
+        Some(auth) => match auth.to_str() {
+            Ok(ses_id_str) => match ses_id_str.parse::<usize>() {
+                Ok(ses_id) => Ok(Role::Publisher(ses_id)),
+                Err(err) => {
+                    println!("{:?}", err);
+                    Err(format!("couldn't parse {}", ses_id_str))
+                }
+            },
+            Err(err) => {
+                println!("{:?}", err);
+                Err("couldn't convert auth header to string".to_owned())
+            }
         },
-        &req,
-        stream,
-    )
+        None => Ok(Role::Subscriber(0)),
+    };
+    match role {
+        Ok(role) => ws::start(
+            WsSession {
+                hb: Instant::now(),
+                ses_role: role,
+                sub_id: role.into(),
+                server_addr: srv.get_ref().clone(),
+            },
+            &req,
+            stream,
+        ),
+        Err(msg) => Err(error::ErrorBadRequest(msg)),
+    }
 }
