@@ -1,11 +1,7 @@
-use std::sync::{
-    atomic::{AtomicUsize, Ordering},
-    Arc,
-};
 use std::time::{Duration, Instant};
 
 use actix::*;
-use actix_web::{web, Error, HttpRequest, HttpResponse};
+use actix_web::{error, web, Error, HttpRequest, HttpResponse};
 
 use actix_web_actors::ws;
 
@@ -38,7 +34,6 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 /// How long before lack of client response causes a timeout
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
-
 impl WsSession {
     // helper method that sends intermittent ping to client
     // also checks ws client heartbeat and terminates session on timeout
@@ -47,16 +42,18 @@ impl WsSession {
             // check client hearbeats
             if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
                 // heartbeat timed out
-                println!("{} TIMED OUT, DISCONNECTING", act.ses_id);
+                println!("{:?} TIMED OUT, DISCONNECTING", act.ses_role);
 
                 // notify chat server
-                act.server_addr.do_send(relay_server::Disconnect { ses_id: act.ses_id});
+                act.server_addr.do_send(relay_server::Disconnect {
+                    ses_id: act.ses_role.into(),
+                });
 
                 // stop actor
                 ctx.stop();
 
                 // do not ping
-                return
+                return;
             };
             ctx.ping(b"");
         });
@@ -157,17 +154,13 @@ impl Actor for WsSession {
 
 // Handles messages from Websocket client, forwarding text to helper method
 impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsSession {
-    fn handle(
-        &mut self,
-        msg: Result<ws::Message, ws::ProtocolError>,
-        ctx: &mut Self::Context,
-    ) {
+    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
         let msg = match msg {
             Err(err) => {
                 println!("RECEIVED ERROR FROM WS CLIENT {:?}", err);
                 ctx.stop();
                 return;
-            },
+            }
             Ok(msg) => msg,
         };
 
@@ -184,9 +177,12 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsSession {
                 });
             }
             ws::Message::Binary(_) => println!("Unexpected binary"),
-            ws::Message::Close(reason) => { ctx.close(reason); ctx.stop(); },
+            ws::Message::Close(reason) => {
+                ctx.close(reason);
+                ctx.stop();
+            }
             ws::Message::Continuation(_) => ctx.stop(),
-            ws::Message::Nop => ()
+            ws::Message::Nop => (),
         }
     }
 }

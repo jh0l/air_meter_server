@@ -41,7 +41,7 @@ impl Role {
 // client events for relay server communications
 
 /// server sends this message to session
-#[derive(Message)]
+#[derive(Message, Debug)]
 #[rtype(result = "()")]
 pub struct Message(pub String);
 
@@ -54,7 +54,7 @@ pub struct Connect {
 }
 
 /// Session is disconnected
-#[derive(Message)]
+#[derive(Message, Debug)]
 #[rtype(result = "()")]
 pub struct Disconnect {
     pub ses_id: usize,
@@ -79,7 +79,7 @@ impl actix::Message for ListSubs {
 }
 
 /// Join subscription, if non-existant throw error
-#[derive(Message)]
+#[derive(Message, Debug)]
 #[rtype(result = "()")]
 pub struct Join {
     /// session id
@@ -115,7 +115,7 @@ impl RelayServer {
             sessions: HashMap::new(),
             subs,
             rng: rand::thread_rng(),
-            visitor_count
+            visitor_count,
         }
     }
 
@@ -176,15 +176,14 @@ impl Handler<Connect> for RelayServer {
 
 impl Handler<Disconnect> for RelayServer {
     type Result = ();
-    
     fn handle(&mut self, msg: Disconnect, _: &mut Context<Self>) {
-        println!("ID: {} DISCONNECTING", msg.ses_id);
+        println!("{:?}", msg);
 
         // remove address
-        if let Some(addr) = self.sessions.get(&msg.ses_id) {
-            println!("ID: {} {:?} DISCONNECTED", msg.ses_id, addr);
+        if self.sessions.get(&msg.ses_id).is_some() {
+            println!("{:?} REMOVED", msg);
             // remove session from all subscriptions
-            for (_, sessions) in &mut self.subs {
+            for sessions in &mut self.subs.values_mut() {
                 sessions.remove(&msg.ses_id);
             }
         }
@@ -226,16 +225,17 @@ impl Handler<Join> for RelayServer {
     type Result = ();
 
     fn handle(&mut self, msg: Join, _: &mut Context<Self>) {
-        let Join {ses_id, sub_id} = msg;
-        
-        self.subs.get_mut(&sub_id)
-        .and_then(|subs| {
-            subs.insert(ses_id);
-            Some(&sub_id)
-        })
-        .or_else(|| {
-            self.message_session(&ses_id, format!("error:404 {} not found!", sub_id));
-            None
-        });
+        let Join { ses_id, sub_id } = msg;
+
+        self.subs
+            .get_mut(&sub_id)
+            .map(|subs| {
+                subs.insert(ses_id);
+                sub_id
+            })
+            .or_else(|| {
+                self.message_session(&ses_id, &format!("error: {} not found!", sub_id));
+                None
+            });
     }
 }

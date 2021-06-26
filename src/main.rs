@@ -1,8 +1,5 @@
-use std::sync::{
-    atomic::{AtomicUsize},
-    Arc,
-};
 use actix::*;
+use std::sync::{atomic::AtomicUsize, Arc};
 
 use actix_files as fs;
 use actix_web::{middleware, web, App, HttpServer};
@@ -20,7 +17,6 @@ mod ws_session;
 use ws_session::ws_route;
 
 const ADDRESS: &str = "127.0.0.1:8080";
-
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
