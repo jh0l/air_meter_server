@@ -1,6 +1,6 @@
 ## sensor thread
     0. sensor creates unique id and persists to file - lookup on restart.
-    1. connect to webserver websocket for sensor
+    1. set `authorization` header to id - connect to webserver websocket
     2. on loop send sensor data and detect wether to reinitialise ccs811 assign to context property
     3. seperate thread that can delete and reinitialise sensor thread context property based on http GET request
 ## web server
