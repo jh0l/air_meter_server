@@ -1,4 +1,3 @@
-use std::time::Duration;
 use std::{io, thread};
 
 use actix::io::SinkWrite;
@@ -12,6 +11,8 @@ use awc::{
 use futures::stream::{SplitSink, StreamExt};
 
 use bytes::Bytes;
+
+use library::HEARTBEAT_INTERVAL;
 
 pub struct SensorClient {
     sink: SinkWrite<Message, SplitSink<Framed<BoxedSocket, Codec>, Message>>,
@@ -56,19 +57,16 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for SensorClient {
     }
 
     fn started(&mut self, _: &mut Context<Self>) {
-        println!("WS Client Connected");
+        println!("Sensor Client Connected");
     }
 
     fn finished(&mut self, ctx: &mut Context<Self>) {
-        println!("WS Client Disconnected");
+        println!("Sensor Client Disconnected");
         ctx.stop()
     }
 }
 
 impl actix::io::WriteHandler<WsProtocolError> for SensorClient {}
-
-/// How often heartbeat pings are sent
-const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 
 impl SensorClient {
     fn hb(&self, ctx: &mut Context<Self>) {
