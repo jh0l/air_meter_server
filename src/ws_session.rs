@@ -214,7 +214,6 @@ pub async fn ws_route(
             WsSession {
                 hb: Instant::now(),
                 ses_role: role,
-                sub_id: role.into(),
                 server_addr: srv.get_ref().clone(),
             },
             &req,
