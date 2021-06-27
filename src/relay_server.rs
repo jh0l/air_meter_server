@@ -83,10 +83,10 @@ impl actix::Message for ListSubs {
 #[derive(Message, Debug)]
 #[rtype(result = "()")]
 pub struct Join {
-    /// session id
+    /// session id of sender
     pub ses_id: usize,
-    /// Subscription id
-    pub sub_id: usize,
+    /// publisher id
+    pub pub_id: usize,
 }
 
 // `RelayServer` manages 'subscriptions'
@@ -229,16 +229,18 @@ impl Handler<Join> for RelayServer {
     type Result = ();
 
     fn handle(&mut self, msg: Join, _: &mut Context<Self>) {
-        let Join { ses_id, sub_id } = msg;
+        let Join { ses_id, pub_id } = msg;
 
         self.subs
-            .get_mut(&sub_id)
-            .map(|subs| {
-                subs.insert(ses_id);
-                sub_id
+            .get_mut(&pub_id)
+            .map(|subs| if subs.insert(ses_id) { Some(()) } else { None })
+            .map(|_| {
+                self.message_session(&ses_id, &format!("joined {}", pub_id));
+                Some(())
             })
             .or_else(|| {
-                self.message_session(&ses_id, &format!("error: {} not found!", sub_id));
+                // TODO add reason for failure
+                self.message_session(&ses_id, &format!("failed to join {}", pub_id));
                 None
             });
     }

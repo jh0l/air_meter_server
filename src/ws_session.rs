@@ -12,21 +12,20 @@ use serde::{Deserialize, Serialize};
 
 use library::{CLIENT_TIMEOUT, HEARTBEAT_INTERVAL};
 
-// commands
-/// Join subscription, (ses_id refers to session to subscribe to, client ses_id already known)
+// Commands
+
+/// Subscribe to publisher
 #[derive(Message, Debug, Deserialize, Serialize)]
 #[rtype(result = "()")]
 pub struct Join {
-    /// session id
-    pub ses_id: usize,
+    /// id of publisher client wants to subscribe to
+    pub pub_id: usize,
 }
 
 pub struct WsSession {
-    // hb increment
+    /// hb increment
     hb: Instant,
-    // subscription id,
-    sub_id: usize,
-    // relay server
+    /// relay server
     server_addr: Addr<relay_server::RelayServer>,
     ses_role: Role,
 }
@@ -75,7 +74,12 @@ impl WsSession {
                         // handle join command
                         match serde_json::from_slice::<Join>(v[1].as_bytes()) {
                             Ok(cmd) => {
-                                println!("[srv/s] {:?}", cmd)
+                                println!("[srv/s] {:?}", cmd);
+                                let Join { pub_id } = cmd;
+                                self.server_addr.do_send(relay_server::Join {
+                                    ses_id: self.ses_role.into(),
+                                    pub_id,
+                                });
                             }
                             Err(err) => {
                                 return Err(format!("error: `{}` `{:?}`", m, err));
