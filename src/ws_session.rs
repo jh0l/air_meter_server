@@ -40,11 +40,6 @@ impl WsSession {
                 // heartbeat timed out
                 println!("[srv/s] {:?} TIMED OUT, DISCONNECTING", act.ses_role);
 
-                // notify chat server
-                act.server_addr.do_send(relay_server::Disconnect {
-                    ses_id: act.ses_role.into(),
-                });
-
                 // stop actor
                 ctx.stop();
 
