@@ -123,8 +123,9 @@ impl RelayServer {
     fn message_session(&self, session_id: &usize, message: &str) {
         if let Some(addr) = self.sessions.get(session_id) {
             do_send_log(addr, message);
+        } else {
+            println!("[srv/m] error: session {} doesnt exist", session_id);
         }
-        println!("[srv/m] error: session {} doesnt exist", session_id);
     }
 
     // Assign subscription entry to incoming address through publisher id
