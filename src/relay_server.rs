@@ -89,11 +89,11 @@ pub struct Join {
     pub pub_id: usize,
 }
 
-// `RelayServer` manages 'subscriptions'
-// relays publisher client readings to users
-// assigns a subscriptions entry to each publisher client based on client ID
-// subscriptions are a collectiono of users subscribed to publishers
-// users are appended to subscriptions HashSet on joining
+/// `RelayServer` manages 'subscriptions'
+/// relays publisher client readings to users
+/// assigns a subscriptions entry to each publisher client based on client ID
+/// subscriptions are a collectiono of users subscribed to publishers
+/// users are appended to subscriptions HashSet on joining
 pub struct RelayServer {
     sessions: HashMap<usize, Recipient<Message>>,
     subs: HashMap<usize, HashSet<usize>>,
