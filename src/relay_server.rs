@@ -20,6 +20,7 @@ pub enum Role {
     Subscriber(usize),
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<usize> for Role {
     fn into(self) -> usize {
         match self {
@@ -128,9 +129,9 @@ impl RelayServer {
 
     // Assign subscription entry to incoming address through publisher id
     // Create subscription entry if None
+    // Will override previously assigned address if existant
     fn connect_publisher(&mut self, msg: Connect) -> usize {
         let Connect { ses_role, .. } = msg;
-        println!("[srv/m] {:?} PUBLISHER CONNECTED", ses_role);
 
         // remove existing address if some exists
         if let Some(addr) = self.sessions.get(&ses_role.into()) {
@@ -141,7 +142,9 @@ impl RelayServer {
         // create subscription entry if none
         if self.subs.get(&ses_role.into()).is_none() {
             self.subs.insert(ses_role.into(), HashSet::new());
+            println!("[srv/m] {:?} SUBSCRIPTION SET INIT'ED", ses_role);
         };
+        println!("[srv/m] {:?} PUBLISHER CONNECTED", ses_role);
         ses_role.into()
     }
 }
@@ -162,6 +165,7 @@ impl Handler<Connect> for RelayServer {
 
         self.visitor_count.fetch_add(1, Ordering::SeqCst);
 
+        // if publisher, id is specified by publisher, else gen new id
         let id: usize = match msg.ses_role {
             Role::Publisher(_) => {
                 self.connect_publisher(msg.clone());
