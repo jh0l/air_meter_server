@@ -2,21 +2,23 @@ use actix::*;
 use std::sync::{atomic::AtomicUsize, Arc};
 
 use actix_files as fs;
-use actix_web::{middleware, web, App, HttpServer};
+use actix_web::{middleware, web, App, HttpRequest, HttpServer, Responder};
 
 mod sensor_client;
-
 use sensor_client::SensorClient;
 
 mod relay_server;
-
 use relay_server::RelayServer;
 
 mod ws_session;
-
 use ws_session::ws_route;
 
-const ADDRESS: &str = "127.0.0.1:8080";
+const ADDRESS: &str = "0.0.0.0:8080";
+
+async fn greet(req: HttpRequest) -> impl Responder {
+    let name = req.match_info().get("name").unwrap_or("World");
+    format!("Hello {}!", &name)
+}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -33,12 +35,15 @@ async fn main() -> std::io::Result<()> {
 
     // initialize sqlite db if not already initialized
 
-    SensorClient::spawn(ADDRESS);
+    SensorClient::spawn("127.0.0.1:8080");
 
     HttpServer::new(move || {
         App::new()
             // enable logger
             .wrap(middleware::Logger::default())
+            // test route
+            .route("/test", web::get().to(greet))
+            .route("/test/{name}", web::get().to(greet))
             // relay_server
             .data(server.clone())
             .data(app_state.clone())
