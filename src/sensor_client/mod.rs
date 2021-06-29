@@ -1,4 +1,4 @@
-use std::{io, thread};
+use std::thread;
 
 use actix::io::SinkWrite;
 use actix::*;
@@ -14,8 +14,12 @@ use bytes::Bytes;
 
 use library::HEARTBEAT_INTERVAL;
 
+mod ccs811;
+use ccs811::Sensor;
+
 pub struct SensorClient {
     sink: SinkWrite<Message, SplitSink<Framed<BoxedSocket, Codec>, Message>>,
+    sensor: Sensor,
 }
 
 #[derive(Message)]
@@ -94,24 +98,27 @@ impl SensorClient {
                     println!("Error: {}", e);
                 })
                 .unwrap();
-            println!("{:?}", response);
+            println!("ws response {:?}", response);
             let (sink, stream) = framed.split();
             let addr = SensorClient::create(|ctx| {
                 SensorClient::add_stream(stream, ctx);
                 SensorClient {
                     sink: SinkWrite::new(sink, ctx),
+                    sensor: Sensor::new_1s().unwrap(),
                 }
             });
 
             // start sensor reading loop
             thread::spawn(move || {
+                // initialize ccs811 sensor
+                let mut sensor = Sensor::new_1s().unwrap();
                 loop {
-                    let mut cmd = String::new();
-                    if io::stdin().read_line(&mut cmd).is_err() {
-                        println!("error");
-                        return;
-                    }
-                    // let srl = format!("eco2:{} evtoc:{} UT:{} IN:{} TS:{}", sensor.read().unwrap());
+                    // assign blocking sensor reading
+                    let read = sensor.read().unwrap();
+                    let cmd = format!(
+                        "{{ \"eco2\": {} \"evtoc\":{} \"increment\":{} \"read_time\":{} \"start_time\":{} }}",
+                        read.eco2, read.evtoc, read.increment, read.read_time, read.start_time
+                    );
                     addr.do_send(SensorReading(cmd));
                 }
             });
