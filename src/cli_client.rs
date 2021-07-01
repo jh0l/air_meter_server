@@ -1,4 +1,5 @@
 //! Simple websocket client.
+use std::env;
 use std::{io, thread};
 
 use actix::io::SinkWrite;
@@ -15,14 +16,18 @@ use futures::stream::{SplitSink, StreamExt};
 use library::HEARTBEAT_INTERVAL;
 
 fn main() {
-    ::std::env::set_var("RUST_LOG", "actix_web=info");
+    env::set_var("RUST_LOG", "actix_web=info");
     env_logger::init();
 
     let sys = System::new("websocket-client");
 
     Arbiter::spawn(async {
+        let backup = "http://192.168.0.67:8080/ws/".to_owned();
+        let args: Vec<String> = env::args().collect();
+        let address = args.get(1).unwrap_or(&backup);
+        println!("Connecting to {:?}", address);
         let (response, framed) = Client::new()
-            .ws("http://127.0.0.1:8080/ws/")
+            .ws(address)
             .connect()
             .await
             .map_err(|e| {
