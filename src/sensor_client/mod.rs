@@ -1,4 +1,5 @@
-use std::thread;
+
+use std::time::{Duration};
 
 use actix::io::SinkWrite;
 use actix::*;
@@ -19,7 +20,7 @@ use ccs811::Sensor;
 
 pub struct SensorClient {
     sink: SinkWrite<Message, SplitSink<Framed<BoxedSocket, Codec>, Message>>,
-    sensor: Sensor,
+    sensor: Sensor
 }
 
 #[derive(Message)]
@@ -31,7 +32,9 @@ impl Actor for SensorClient {
 
     fn started(&mut self, ctx: &mut Context<Self>) {
         // start heartbeats otherwise server will disconnect after 10 seconds
-        self.hb(ctx)
+        self.hb(ctx);
+        self.run_sensor(ctx);
+        println!("SENSOR STARTED");
     }
 
     fn stopped(&mut self, _: &mut Context<Self>) {
@@ -83,6 +86,18 @@ impl SensorClient {
         });
     }
 
+    fn run_sensor(&self, ctx: &mut Context<Self>) {
+        ctx.run_later(Duration::from_secs(1), |act, ctx| {
+            let read = act.sensor.read().unwrap();
+            let cmd = format!(
+                "{{ \"eco2\": {} \"evtoc\":{} \"increment\":{} \"read_time\":{} \"start_time\":{} }}",
+                read.eco2, read.evtoc, read.increment, read.read_time, read.start_time
+            );
+            ctx.address().do_send(SensorReading(cmd));
+            act.run_sensor(ctx);
+        });
+    }
+
     pub fn spawn(server_url: &'static str) {
         let server_url = &(*server_url);
         Arbiter::spawn(async move {
@@ -100,26 +115,11 @@ impl SensorClient {
                 .unwrap();
             println!("ws response {:?}", response);
             let (sink, stream) = framed.split();
-            let addr = SensorClient::create(|ctx| {
+            SensorClient::create(|ctx| {
                 SensorClient::add_stream(stream, ctx);
                 SensorClient {
                     sink: SinkWrite::new(sink, ctx),
-                    sensor: Sensor::new_1s().unwrap(),
-                }
-            });
-
-            // start sensor reading loop
-            thread::spawn(move || {
-                // initialize ccs811 sensor
-                let mut sensor = Sensor::new_1s().unwrap();
-                loop {
-                    // assign blocking sensor reading
-                    let read = sensor.read().unwrap();
-                    let cmd = format!(
-                        "{{ \"eco2\": {} \"evtoc\":{} \"increment\":{} \"read_time\":{} \"start_time\":{} }}",
-                        read.eco2, read.evtoc, read.increment, read.read_time, read.start_time
-                    );
-                    addr.do_send(SensorReading(cmd));
+                    sensor: Sensor::new_1s().unwrap(), // initialize ccs811 sensor
                 }
             });
         });
