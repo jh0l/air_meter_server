@@ -52,7 +52,7 @@ impl WsSession {
 
     // helper method handles ws messages from client, parses msg then forwards
     // to appropriate relay server handler
-    fn parse_message(&self, text: &str, _: &mut ws::WebsocketContext<Self>) -> Result<(), String> {
+    fn parse_message(&self, text: &str, ctx: &mut ws::WebsocketContext<Self>) -> Result<(), String> {
         match self.ses_role {
             Role::Publisher(_) => {
                 self.server_addr.do_send(relay_server::PublisherMessage {
@@ -79,12 +79,12 @@ impl WsSession {
                             Err(err) => {
                                 return Err(format!("error: `{}` `{:?}`", m, err));
                             }
-                        }
+                        };
                     }
                     _ => {
-                        panic!("unimplemented");
+                        ctx.text(format!("unrecognised command {}", v[0]));
                     }
-                }
+                };
             }
         };
         Ok(())
