@@ -39,7 +39,10 @@ fn main() {
         let (sink, stream) = framed.split();
         let addr = ChatClient::create(|ctx| {
             ChatClient::add_stream(stream, ctx);
-            ChatClient(SinkWrite::new(sink, ctx))
+            ChatClient {
+                sink: SinkWrite::new(sink, ctx),
+                cache: 0,
+            }
         });
 
         // start console loop
@@ -55,11 +58,20 @@ fn main() {
     sys.run().unwrap();
 }
 
-struct ChatClient(SinkWrite<Message, SplitSink<Framed<BoxedSocket, Codec>, Message>>);
+struct ChatClient {
+    sink: SinkWrite<Message, SplitSink<Framed<BoxedSocket, Codec>, Message>>,
+    cache: u64,
+}
 
 #[derive(Message)]
 #[rtype(result = "()")]
 struct ClientCommand(String);
+
+#[derive(Message, Debug)]
+#[rtype(result = "()")]
+struct Heartbeat {
+    cache: u64,
+}
 
 impl Actor for ChatClient {
     type Context = Context<Self>;
@@ -78,14 +90,15 @@ impl Actor for ChatClient {
 }
 
 impl ChatClient {
-    fn hb(&self, ctx: &mut Context<Self>) {
-        ctx.run_later(HEARTBEAT_INTERVAL, |act, ctx| {
-            act.0.write(Message::Ping(Bytes::from_static(b"")));
-            act.hb(ctx);
+    fn hb(&mut self, ctx: &mut Context<Self>) {
+        ctx.notify(Heartbeat { cache: self.cache });
+        // ctx.run_later(HEARTBEAT_INTERVAL, |act, ctx| {
+        // self.sink.write(Message::Ping(Bytes::from_static(b"")));
+        // self.hb(ctx);
 
-            // client should also check for a timeout here, similar to the
-            // server code
-        });
+        //     // client should also check for a timeout here, similar to the
+        //     // server code
+        // });
     }
 }
 
@@ -93,8 +106,19 @@ impl ChatClient {
 impl Handler<ClientCommand> for ChatClient {
     type Result = ();
 
-    fn handle(&mut self, msg: ClientCommand, _ctx: &mut Context<Self>) {
-        self.0.write(Message::Text(msg.0));
+    fn handle(&mut self, msg: ClientCommand, _: &mut Context<Self>) {
+        self.sink.write(Message::Text(msg.0));
+    }
+}
+
+/// Handle heartbeat intervals
+impl Handler<Heartbeat> for ChatClient {
+    type Result = ();
+
+    fn handle(&mut self, msg: Heartbeat, ctx: &mut Context<Self>) {
+        println!("{:?}", msg);
+        self.sink.write(Message::Ping(Bytes::from_static(b"")));
+        ctx.notify_later(msg, HEARTBEAT_INTERVAL);
     }
 }
 
