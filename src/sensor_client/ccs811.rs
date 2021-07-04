@@ -14,7 +14,7 @@ pub struct Reading {
     pub increment: String,
 }
 
-fn now() -> u64 {
+fn now_secs() -> u64 {
     SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap()
@@ -44,7 +44,6 @@ impl Handler<TakeReading> for Sensor {
     type Result = ();
 
     fn handle(&mut self, _: TakeReading, _: &mut SyncContext<Self>) {
-        println!("sensor RECEIVED TAKE READING");
         self.take_reading();
     }
 }
@@ -62,6 +61,21 @@ impl Handler<Message> for Sensor {
 
 impl Sensor {
     pub fn new(mode: MeasurementMode) -> Result<Sensor, ()> {
+        Sensor {
+            app: None,
+            start_time: now_secs(),
+            increment: mode,
+            session: None,
+        }
+        .load_sensor()
+    }
+
+    pub fn new_1s() -> Result<Sensor, ()> {
+        Sensor::new(MeasurementMode::ConstantPower1s)
+    }
+
+    #[cfg(target_arch = "arm")]
+    pub fn load_sensor(mut self) -> Result<Sensor, ()> {
         let dev = I2cdev::new("/dev/i2c-1").unwrap();
         let address = SlaveAddr::default();
         let sensor = Ccs811Awake::new(dev, address);
@@ -70,23 +84,23 @@ impl Sensor {
                 println!("Error during application start: {:?}", error);
                 Err(())
             }
-            Ok(mut sensor) => match sensor.set_mode(mode) {
+            Ok(mut sensor) => match sensor.set_mode(self.increment) {
                 Err(err) => {
                     println!("{:?}", err);
                     Err(())
                 }
-                Ok(_) => Ok(Sensor {
-                    app: sensor,
-                    start_time: now(),
-                    increment: mode,
-                    session: None,
-                }),
+                Ok(_) => {
+                    self.app = Some(sensor);
+                    Ok(self)
+                }
             },
         }
     }
 
-    pub fn new_1s() -> Result<Sensor, ()> {
-        Sensor::new(MeasurementMode::ConstantPower1s)
+    #[cfg(not(target_arch = "arm"))]
+    pub fn load_sensor(self) -> Result<Sensor, ()> {
+        println!("<<SENSOR IN TEST MODE - NOT REAL READINGS>>");
+        Ok(self)
     }
 
     fn mode_to_str(&self) -> String {
@@ -128,13 +142,24 @@ impl Sensor {
         Reading,
         embedded_ccs811::ErrorAwake<linux_embedded_hal::i2cdev::linux::LinuxI2CError>,
     > {
-        let data = block!(self.app.data())?;
-        Ok(Reading {
-            eco2: data.eco2,
-            evtoc: data.etvoc,
-            increment: self.mode_to_str(),
-            read_time: now(),
-            start_time: self.start_time,
-        })
+        match &mut self.app {
+            Some(app) => {
+                let data = block!(app.data())?;
+                Ok(Reading {
+                    eco2: data.eco2,
+                    evtoc: data.etvoc,
+                    increment: self.mode_to_str(),
+                    read_time: now_secs(),
+                    start_time: self.start_time,
+                })
+            }
+            None => Ok(Reading {
+                eco2: now_secs() as u16 / 30,
+                evtoc: now_secs() as u16 / 1000 * 2,
+                increment: self.mode_to_str(),
+                read_time: now_secs(),
+                start_time: self.start_time,
+            }),
+        }
     }
 }
