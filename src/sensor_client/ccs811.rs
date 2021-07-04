@@ -154,8 +154,8 @@ impl Sensor {
                 })
             }
             None => Ok(Reading {
-                eco2: now_secs() as u16 / 30,
-                evtoc: now_secs() as u16 / 1000 * 2,
+                eco2: now_secs() as u16,
+                evtoc: now_secs() as u16 / 2,
                 increment: self.mode_to_str(),
                 read_time: now_secs(),
                 start_time: self.start_time,

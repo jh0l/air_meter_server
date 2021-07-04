@@ -57,7 +57,6 @@ impl Handler<sensor_client::Message> for SessionClient {
 impl Handler<CurrentMode> for SessionClient {
     type Result = ();
     fn handle(&mut self, msg: CurrentMode, ctx: &mut Context<Self>) {
-        println!("sescli RECEIVED {:?}", msg);
         self.mode = Some(msg.inc);
         self.version += 1;
         ctx.notify(TakeReading {
@@ -70,7 +69,6 @@ impl Handler<CurrentMode> for SessionClient {
 impl Handler<TakeReading> for SessionClient {
     type Result = ();
     fn handle(&mut self, msg: TakeReading, ctx: &mut Context<Self>) {
-        println!("sescli RECEIVED {:?} with self {:?}", msg, self.version);
         // check measurement mode hasn't been changed before reading
         if msg.version.eq(&self.version) {
             // sensor should have connected to session client in order for

@@ -10,31 +10,31 @@ use awc::{
 };
 use futures::stream::SplitSink;
 
-use actix::prelude::*;
+use actix::prelude::{Addr, Message as ActixMessage};
 
 mod ccs811;
 mod session_client;
 
-#[derive(Message, Debug)]
+#[derive(ActixMessage, Debug)]
 #[rtype(result = "()")]
 pub struct Message(pub String);
 
 /// connect SessionClient and Sensor together
-#[derive(Message, Clone)]
+#[derive(ActixMessage, Clone)]
 #[rtype(result = "()")]
 pub struct ConnectSession {
     addr: Addr<SessionClient>,
 }
 
 /// Sensor tells SessionClient it's current MeasurementMode
-#[derive(Message, Clone, Debug)]
+#[derive(ActixMessage, Clone, Debug)]
 #[rtype(result = "()")]
 pub struct CurrentMode {
     inc: MeasurementMode,
 }
 
 /// tells the SessionClient to tell the Sensor to take a reading at intervals
-#[derive(Message, Debug, Clone, Copy)]
+#[derive(ActixMessage, Debug, Clone, Copy)]
 #[rtype(result = "()")]
 struct TakeReading {
     version: u64,
