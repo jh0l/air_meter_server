@@ -1,127 +1,55 @@
-
-use std::time::{Duration};
+use embedded_ccs811::{mode, Ccs811Awake, MeasurementMode};
+use linux_embedded_hal::I2cdev;
 
 use actix::io::SinkWrite;
-use actix::*;
+
 use actix_codec::Framed;
 use awc::{
-    error::WsProtocolError,
-    ws::{Codec, Frame, Message},
-    BoxedSocket, Client,
+    ws::{Codec, Message as WsMessage},
+    BoxedSocket,
 };
-use futures::stream::{SplitSink, StreamExt};
+use futures::stream::SplitSink;
 
-use bytes::Bytes;
-
-use library::HEARTBEAT_INTERVAL;
+use actix::prelude::*;
 
 mod ccs811;
-use ccs811::Sensor;
+mod session_client;
 
-pub struct SensorClient {
-    sink: SinkWrite<Message, SplitSink<Framed<BoxedSocket, Codec>, Message>>,
-    sensor: Sensor
-}
-
-#[derive(Message)]
+#[derive(Message, Debug)]
 #[rtype(result = "()")]
-struct SensorReading(String);
+pub struct Message(pub String);
 
-impl Actor for SensorClient {
-    type Context = Context<Self>;
-
-    fn started(&mut self, ctx: &mut Context<Self>) {
-        // start heartbeats otherwise server will disconnect after 10 seconds
-        self.hb(ctx);
-        self.run_sensor(ctx);
-        println!("SENSOR STARTED");
-    }
-
-    fn stopped(&mut self, _: &mut Context<Self>) {
-        println!("Disconnected");
-
-        // Stop application on disconnect
-        println!("STOPPING SENSOR CLIENT");
-        System::current().stop();
-    }
+/// connect SessionClient and Sensor together
+#[derive(Message, Clone)]
+#[rtype(result = "()")]
+pub struct ConnectSession {
+    addr: Addr<SessionClient>,
 }
 
-/// Handle stdin commands
-impl Handler<SensorReading> for SensorClient {
-    type Result = ();
-
-    fn handle(&mut self, msg: SensorReading, _ctx: &mut Context<Self>) {
-        self.sink.write(Message::Text(msg.0));
-    }
+/// Sensor tells SessionClient it's current MeasurementMode
+#[derive(Message, Clone, Debug)]
+#[rtype(result = "()")]
+pub struct CurrentMode {
+    inc: MeasurementMode,
 }
 
-/// Handle server websocket messages
-impl StreamHandler<Result<Frame, WsProtocolError>> for SensorClient {
-    fn handle(&mut self, msg: Result<Frame, WsProtocolError>, _: &mut Context<Self>) {
-        if let Ok(Frame::Text(txt)) = msg {
-            println!("Server: {:?}", txt)
-        }
-    }
-
-    fn started(&mut self, _: &mut Context<Self>) {
-        println!("Sensor Client Connected");
-    }
-
-    fn finished(&mut self, ctx: &mut Context<Self>) {
-        println!("Sensor Client Disconnected");
-        ctx.stop()
-    }
+/// tells the SessionClient to tell the Sensor to take a reading at intervals
+#[derive(Message, Debug, Clone, Copy)]
+#[rtype(result = "()")]
+struct TakeReading {
+    version: u64,
 }
 
-impl actix::io::WriteHandler<WsProtocolError> for SensorClient {}
+pub struct SessionClient {
+    sink: SinkWrite<WsMessage, SplitSink<Framed<BoxedSocket, Codec>, WsMessage>>,
+    sensor: Addr<Sensor>,
+    mode: Option<MeasurementMode>,
+    version: u64,
+}
 
-impl SensorClient {
-    fn hb(&self, ctx: &mut Context<Self>) {
-        ctx.run_later(HEARTBEAT_INTERVAL, |act, ctx| {
-            act.sink.write(Message::Ping(Bytes::from_static(b"")));
-            act.hb(ctx);
-
-            // client should also check for a timeout here, similar to the
-            // server code
-        });
-    }
-
-    fn run_sensor(&self, ctx: &mut Context<Self>) {
-        ctx.run_later(Duration::from_secs(1), |act, ctx| {
-            let read = act.sensor.read().unwrap();
-            let cmd = format!(
-                "{{ \"eco2\": {} \"evtoc\":{} \"increment\":{} \"read_time\":{} \"start_time\":{} }}",
-                read.eco2, read.evtoc, read.increment, read.read_time, read.start_time
-            );
-            ctx.address().do_send(SensorReading(cmd));
-            act.run_sensor(ctx);
-        });
-    }
-
-    pub fn spawn(server_url: &'static str) {
-        let server_url = &(*server_url);
-        Arbiter::spawn(async move {
-            let mut url = "http://".to_owned();
-            url.push_str(server_url);
-            url.push_str("/ws/");
-            let (response, framed) = Client::new()
-                .ws(url)
-                .set_header("authorization", "811")
-                .connect()
-                .await
-                .map_err(|e| {
-                    println!("Error: {}", e);
-                })
-                .unwrap();
-            println!("ws response {:?}", response);
-            let (sink, stream) = framed.split();
-            SensorClient::create(|ctx| {
-                SensorClient::add_stream(stream, ctx);
-                SensorClient {
-                    sink: SinkWrite::new(sink, ctx),
-                    sensor: Sensor::new_1s().unwrap(), // initialize ccs811 sensor
-                }
-            });
-        });
-    }
+pub struct Sensor {
+    app: Ccs811Awake<I2cdev, mode::App>,
+    start_time: u64,
+    increment: MeasurementMode,
+    session: Option<Addr<SessionClient>>,
 }

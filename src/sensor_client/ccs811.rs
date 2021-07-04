@@ -1,13 +1,10 @@
-use embedded_ccs811::{mode, prelude::*, Ccs811Awake, MeasurementMode, ModeChangeError, SlaveAddr};
+use actix::*;
+use embedded_ccs811::{prelude::*, Ccs811Awake, MeasurementMode, ModeChangeError, SlaveAddr};
 use linux_embedded_hal::I2cdev;
 use nb::block;
 use std::time::SystemTime;
 
-pub struct Sensor {
-    app: Ccs811Awake<I2cdev, mode::App>,
-    start_time: u64,
-    increment: MeasurementMode,
-}
+use crate::sensor_client::{ConnectSession, CurrentMode, Message, Sensor, TakeReading};
 
 pub struct Reading {
     pub eco2: u16,
@@ -23,6 +20,46 @@ fn now() -> u64 {
         .unwrap()
         .as_secs()
 }
+
+impl Actor for Sensor {
+    type Context = SyncContext<Self>;
+}
+
+/// handle receiving connection to SessionClient
+impl Handler<ConnectSession> for Sensor {
+    type Result = ();
+
+    fn handle(&mut self, msg: ConnectSession, _: &mut SyncContext<Self>) {
+        msg.addr
+            .try_send(CurrentMode {
+                inc: self.increment,
+            })
+            .unwrap();
+        self.session = Some(msg.addr);
+    }
+}
+
+/// handle requests to take a reading
+impl Handler<TakeReading> for Sensor {
+    type Result = ();
+
+    fn handle(&mut self, _: TakeReading, _: &mut SyncContext<Self>) {
+        println!("sensor RECEIVED TAKE READING");
+        self.take_reading();
+    }
+}
+
+/// handle messages from SessionClient (probably to change increment type)
+impl Handler<Message> for Sensor {
+    type Result = ();
+
+    fn handle(&mut self, msg: Message, _: &mut SyncContext<Self>) {
+        // TODO handle increment change request
+        println!("SENSOR RECEIVED {:?}", msg);
+        todo!("handle changing increment type for {:?}", msg);
+    }
+}
+
 impl Sensor {
     pub fn new(mode: MeasurementMode) -> Result<Sensor, ()> {
         let dev = I2cdev::new("/dev/i2c-1").unwrap();
@@ -42,6 +79,7 @@ impl Sensor {
                     app: sensor,
                     start_time: now(),
                     increment: mode,
+                    session: None,
                 }),
             },
         }
@@ -61,6 +99,27 @@ impl Sensor {
             LowPowerPulseHeating60s => "LowPowerPulseHeating60s",
         };
         r.to_owned()
+    }
+
+    pub fn take_reading(&mut self) {
+        // read() blocks the thread
+        match &mut self.session.clone() {
+            Some(session) => match self.read() {
+                Ok(read) => {
+                    let cmd = format!(
+                                "{{ \"eco2\": {} \"evtoc\":{} \"increment\":{} \"read_time\":{} \"start_time\":{} }}",
+                                read.eco2, read.evtoc, read.increment, read.read_time, read.start_time
+                            );
+                    session.do_send(Message(cmd));
+                }
+                Err(err) => {
+                    println!("SENSOR READ ERROR: {:?}", err);
+                }
+            },
+            None => {
+                println!("Sensor waiting for session");
+            }
+        };
     }
 
     pub fn read(
