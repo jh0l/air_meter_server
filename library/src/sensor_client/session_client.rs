@@ -45,11 +45,12 @@ impl Actor for SessionClient {
 }
 
 /// Handle messages (from Sensor actor) forward them to websocket session
-impl Handler<sensor_client::Message> for SessionClient {
+impl Handler<sensor_client::Reading> for SessionClient {
     type Result = ();
 
-    fn handle(&mut self, msg: sensor_client::Message, _: &mut Context<Self>) {
-        self.sink.write(Message::Text(msg.0));
+    fn handle(&mut self, msg: sensor_client::Reading, _: &mut Context<Self>) {
+        self.sink
+            .write(Message::Text(format!("/reading {}", msg.0)));
     }
 }
 

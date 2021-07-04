@@ -17,7 +17,7 @@ mod session_client;
 
 #[derive(ActixMessage, Debug)]
 #[rtype(result = "()")]
-pub struct Message(pub String);
+pub struct Reading(pub String);
 
 /// connect SessionClient and Sensor together
 #[derive(ActixMessage, Clone)]

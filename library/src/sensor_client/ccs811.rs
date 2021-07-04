@@ -4,7 +4,9 @@ use linux_embedded_hal::I2cdev;
 use nb::block;
 use std::time::SystemTime;
 
-use crate::sensor_client::{ConnectSession, CurrentMode, Message, Sensor, TakeReading};
+use crate::sensor_client::{
+    ConnectSession, CurrentMode, Reading as ReadingMsg, Sensor, TakeReading,
+};
 
 pub struct Reading {
     pub eco2: u16,
@@ -45,17 +47,6 @@ impl Handler<TakeReading> for Sensor {
 
     fn handle(&mut self, _: TakeReading, _: &mut SyncContext<Self>) {
         self.take_reading();
-    }
-}
-
-/// handle messages from SessionClient (probably to change increment type)
-impl Handler<Message> for Sensor {
-    type Result = ();
-
-    fn handle(&mut self, msg: Message, _: &mut SyncContext<Self>) {
-        // TODO handle increment change request
-        println!("SENSOR RECEIVED {:?}", msg);
-        todo!("handle changing increment type for {:?}", msg);
     }
 }
 
@@ -124,7 +115,7 @@ impl Sensor {
                                 "{{ \"eco2\": {} \"evtoc\":{} \"increment\":{} \"read_time\":{} \"start_time\":{} }}",
                                 read.eco2, read.evtoc, read.increment, read.read_time, read.start_time
                             );
-                    session.do_send(Message(cmd));
+                    session.do_send(ReadingMsg(cmd));
                 }
                 Err(err) => {
                     println!("SENSOR READ ERROR: {:?}", err);
