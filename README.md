@@ -26,6 +26,7 @@ Then run `cross_deploy.sh` to compile, `scp` the `server` binary, and run it ove
 - [x] receive air_meter_node requests via websockets
   - [ ]  note - provision for db based config response for node (increment, restart)
 - [x] support websocket requests for air_meter
+- [ ] save air_meter readings to db accessable by users
 - [ ] serve web_client requests with Askama template
 - [ ] serve web_client with template that requests react_app
 - [ ] add to system startup (singleton)
@@ -36,4 +37,5 @@ Then run `cross_deploy.sh` to compile, `scp` the `server` binary, and run it ove
 - [ ] in factory config rasp pi starts with wifi hotspot with webpage for config
   - [ ] user joins rasp pi wifi - navigates to config webpage
   - [ ] enter wifi password - rasp pi will have to terminate hotspot then test wifi password
-  - [ ] use websockets to notify of success (user will have to join orig wifi manually)
+  - [ ] sensor client obtains authorization id and server address? 
+  - [ ] use websockets to notify of success with ip of rasp pi on user's wifi (user will have to join orig wifi manually)
