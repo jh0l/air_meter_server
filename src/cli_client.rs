@@ -107,7 +107,17 @@ impl Handler<ClientCommand> for ChatClient {
     type Result = ();
 
     fn handle(&mut self, msg: ClientCommand, _: &mut Context<Self>) {
-        self.sink.write(Message::Text(msg.0));
+        let v: Vec<&str> = msg.0.trim().splitn(2, ' ').collect();
+        let res = match v[0] {
+            "/join" => Some(format!("/join {{ \"pub_id\": {} }}", v[1])),
+            _ => {
+                println!("Unknown command {}", msg.0);
+                None
+            }
+        };
+        if let Some(res) = res {
+            self.sink.write(Message::Text(res));
+        }
     }
 }
 
