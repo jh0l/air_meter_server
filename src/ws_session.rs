@@ -1,16 +1,17 @@
 use std::time::Instant;
 
-use actix::*;
+use actix::prelude::*;
+
 use actix_web::{error, web, Error, HttpRequest, HttpResponse};
 
 use actix_web_actors::ws;
 
 use crate::relay_server;
-use relay_server::Role;
-
-use serde::{Deserialize, Serialize};
+use relay_server::{Join as SubJoin, PublisherMessage, Reading, Role};
 
 use library::{CLIENT_TIMEOUT, HEARTBEAT_INTERVAL};
+use serde::{Deserialize, Serialize};
+use serde_json::from_slice;
 
 // Commands
 
@@ -28,6 +29,13 @@ pub struct WsSession {
     /// relay server
     server_addr: Addr<relay_server::RelayServer>,
     ses_role: Role,
+}
+
+fn from_json<'a, T>(des: &'a str) -> Result<T, String>
+where
+    T: Deserialize<'a>,
+{
+    from_slice::<T>(des.as_bytes()).map_err(|err| (format!("{:?}", err)))
 }
 
 impl WsSession {
@@ -52,42 +60,32 @@ impl WsSession {
 
     // helper method handles ws messages from client, parses msg then forwards
     // to appropriate relay server handler
-    fn parse_message(&self, text: &str, ctx: &mut ws::WebsocketContext<Self>) -> Result<(), String> {
+    fn parse_message(&self, text: &str, _: &mut ws::WebsocketContext<Self>) -> Result<(), String> {
+        let m = text.trim();
+        // parse command
+        let v: Vec<&str> = m.splitn(2, ' ').collect();
+        let cmd = v[0];
+        let msg = v[1].to_owned();
         match self.ses_role {
-            Role::Publisher(_) => {
-                self.server_addr.do_send(relay_server::PublisherMessage {
-                    msg: text.to_owned(),
-                    pub_id: self.ses_role.into(),
-                });
-            }
-            Role::Subscriber(_) => {
-                let m = text.trim();
-                // parse command
-                let v: Vec<&str> = m.splitn(2, ' ').collect();
-                match v[0] {
-                    "/join" => {
-                        // handle join command
-                        match serde_json::from_slice::<Join>(v[1].as_bytes()) {
-                            Ok(cmd) => {
-                                println!("[srv/s] {:?}", cmd);
-                                let Join { pub_id } = cmd;
-                                self.server_addr.do_send(relay_server::Join {
-                                    ses_id: self.ses_role.into(),
-                                    pub_id,
-                                });
-                            }
-                            Err(err) => {
-                                return Err(format!("error: `{}` `{:?}`", m, err));
-                            }
-                        };
-                    }
-                    _ => {
-                        ctx.text(format!("unrecognised command {}", v[0]));
-                    }
-                };
-            }
-        };
-        Ok(())
+            Role::Publisher(pub_id) => match cmd {
+                "/reading" => {
+                    let reading = from_json::<Reading>(&msg)?;
+                    self.server_addr
+                        .do_send(PublisherMessage::<String> { msg, pub_id });
+                    Ok(())
+                }
+                _ => Err(format!("unrecognised command {}", cmd)),
+            },
+            Role::Subscriber(ses_id) => match cmd {
+                "/join" => {
+                    let payload = from_json::<Join>(&msg)?;
+                    let Join { pub_id } = payload;
+                    self.server_addr.do_send(SubJoin { ses_id, pub_id });
+                    Ok(())
+                }
+                _ => Err(format!("unrecognised command {}", cmd)),
+            },
+        }
     }
 }
 

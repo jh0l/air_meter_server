@@ -3,6 +3,7 @@
 //! Publishing clients send messages to subscribed users through `RelayServer`.
 //! Each publisher has its own subscription, multiple users can connect to a single
 //! publisher's subscription
+use std::collections::{HashMap, HashSet};
 
 use actix::prelude::*;
 use rand::{rngs::ThreadRng, Rng};
@@ -12,7 +13,7 @@ use std::sync::{
     Arc,
 };
 
-use std::collections::{HashMap, HashSet};
+use serde::{Deserialize, Serialize};
 
 #[derive(Copy, Clone, Debug)]
 pub enum Role {
@@ -61,14 +62,27 @@ pub struct Disconnect {
     pub ses_id: usize,
 }
 
-/// Send message to specific subscription (used by publisher)
+/// Send message to publishers subscribers
 #[derive(Message, Debug)]
 #[rtype(result = "()")]
-pub struct PublisherMessage {
+pub struct PublisherMessage<T>
+where
+    T: std::fmt::Debug,
+{
     /// Peer message
-    pub msg: String,
+    pub msg: T,
     /// publisher id
     pub pub_id: usize,
+}
+
+/// Publisher reading
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Reading {
+    pub eco2: u16,
+    pub evtoc: u16,
+    pub read_time: u64,
+    pub start_time: u64,
+    pub increment: String,
 }
 
 /// List of available subscriptions
@@ -148,14 +162,14 @@ impl RelayServer {
     }
 }
 
-// Make actor from `RelaySever`
+/// Make actor from `RelaySever`
 impl Actor for RelayServer {
     // Simple context
     type Context = Context<Self>;
 }
 
-// Handler for Connect message
-// Register a new session and assign unique id to this session
+/// Handler for Connect message
+/// Register a new session and assign unique id to this session
 impl Handler<Connect> for RelayServer {
     type Result = usize;
 
@@ -193,11 +207,11 @@ impl Handler<Disconnect> for RelayServer {
     }
 }
 
-// Handler for Publisher message.
-impl Handler<PublisherMessage> for RelayServer {
+/// Handler for Publisher message.
+impl Handler<PublisherMessage<String>> for RelayServer {
     type Result = ();
 
-    fn handle(&mut self, msg: PublisherMessage, _: &mut Context<Self>) {
+    fn handle(&mut self, msg: PublisherMessage<String>, _: &mut Context<Self>) {
         if let Some(sessions) = self.subs.get(&msg.pub_id) {
             println!("[srv/m] {:?}", msg);
             for user_id in sessions {
@@ -209,7 +223,16 @@ impl Handler<PublisherMessage> for RelayServer {
     }
 }
 
-// Handler for `List Publishers` message request.
+/// Handler for Publisher message containing sensor reading
+impl Handler<PublisherMessage<Reading>> for RelayServer {
+    type Result = ();
+
+    fn handle(&mut self, msg: PublisherMessage<Reading>, _: &mut Context<Self>) {
+        // self.actions.insert_reading(msg.reading);
+    }
+}
+
+/// Handler for `List Publishers` message request.
 impl Handler<ListSubs> for RelayServer {
     type Result = MessageResult<ListSubs>;
 
