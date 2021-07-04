@@ -9,7 +9,4 @@ pub mod sensor_client;
 pub use sensor_client::SessionClient;
 
 pub mod relay_server;
-pub use relay_server::RelayServer;
-
-pub mod ws_session;
-pub use ws_session::ws_route;
+pub use relay_server::{server::RelayServer, ws_route};

@@ -6,8 +6,12 @@ use actix_web::{error, web, Error, HttpRequest, HttpResponse};
 
 use actix_web_actors::ws;
 
-use crate::relay_server;
-use relay_server::{Join as SubJoin, PublisherMessage, Reading, Role};
+use crate::{
+    relay_server,
+    relay_server::{
+        server::RelayServer, Join as SubJoin, PublisherMessage as PubMsg, Reading, Role,
+    },
+};
 
 use crate::{CLIENT_TIMEOUT, HEARTBEAT_INTERVAL};
 use serde::{Deserialize, Serialize};
@@ -27,7 +31,7 @@ pub struct WsSession {
     /// hb increment
     hb: Instant,
     /// relay server
-    server_addr: Addr<relay_server::RelayServer>,
+    server_addr: Addr<RelayServer>,
     ses_role: Role,
 }
 
@@ -70,8 +74,7 @@ impl WsSession {
             Role::Publisher(pub_id) => match cmd {
                 "/reading" => {
                     let reading = from_json::<Reading>(&msg)?;
-                    self.server_addr
-                        .do_send(PublisherMessage::<String> { msg, pub_id });
+                    self.server_addr.do_send(PubMsg::<String> { msg, pub_id });
                     Ok(())
                 }
                 _ => Err(format!("unrecognised command {}", cmd)),
@@ -184,7 +187,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsSession {
 pub async fn ws_route(
     req: HttpRequest,
     stream: web::Payload,
-    srv: web::Data<Addr<relay_server::RelayServer>>,
+    srv: web::Data<Addr<RelayServer>>,
 ) -> Result<HttpResponse, Error> {
     let role: Result<Role, String> = match req.headers().get("authorization") {
         Some(auth) => match auth.to_str() {
