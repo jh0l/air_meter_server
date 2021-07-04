@@ -1,17 +1,10 @@
+use library::{ws_route, RelayServer, SessionClient};
+
 use actix::*;
 use std::sync::{atomic::AtomicUsize, Arc};
 
 use actix_files as fs;
 use actix_web::{middleware, web, App, HttpRequest, HttpServer, Responder};
-
-mod sensor_client;
-use sensor_client::SessionClient;
-
-mod relay_server;
-use relay_server::RelayServer;
-
-mod ws_session;
-use ws_session::ws_route;
 
 const ADDRESS: &str = "0.0.0.0:8080";
 async fn greet(req: HttpRequest) -> impl Responder {

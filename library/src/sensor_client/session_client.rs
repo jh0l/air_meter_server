@@ -11,7 +11,7 @@ use std::time::Duration;
 
 use bytes::Bytes;
 
-use library::HEARTBEAT_INTERVAL;
+use crate::HEARTBEAT_INTERVAL;
 
 use crate::sensor_client;
 use crate::sensor_client::{ConnectSession, CurrentMode, Sensor, SessionClient, TakeReading};

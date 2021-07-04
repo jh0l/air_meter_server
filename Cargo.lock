@@ -1052,6 +1052,24 @@ checksum = "12b8adadd720df158f4d70dfe7ccc6adb0472d7c55ca83445f6a5ab3e36f8fb6"
 [[package]]
 name = "library"
 version = "0.1.0"
+dependencies = [
+ "actix",
+ "actix-codec",
+ "actix-files",
+ "actix-web",
+ "actix-web-actors",
+ "awc",
+ "bytes 0.5.6",
+ "embedded-ccs811",
+ "embedded-hal",
+ "env_logger",
+ "futures",
+ "linux-embedded-hal",
+ "nb 1.0.0",
+ "rand",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "linked-hash-map"

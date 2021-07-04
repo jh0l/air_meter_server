@@ -9,7 +9,7 @@ use actix_web_actors::ws;
 use crate::relay_server;
 use relay_server::{Join as SubJoin, PublisherMessage, Reading, Role};
 
-use library::{CLIENT_TIMEOUT, HEARTBEAT_INTERVAL};
+use crate::{CLIENT_TIMEOUT, HEARTBEAT_INTERVAL};
 use serde::{Deserialize, Serialize};
 use serde_json::from_slice;
 
