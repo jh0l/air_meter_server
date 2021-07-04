@@ -5,7 +5,7 @@
 //! publisher's subscription
 
 use actix::prelude::*;
-use rand::{self, rngs::ThreadRng, Rng};
+use rand::{rngs::ThreadRng, Rng};
 
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
@@ -131,9 +131,7 @@ impl RelayServer {
     // Assign subscription entry to incoming address through publisher id
     // Create subscription entry if None
     // Will override previously assigned address if existant
-    fn connect_publisher(&mut self, msg: Connect) -> usize {
-        let Connect { ses_role, .. } = msg;
-
+    fn connect_publisher(&mut self, ses_role: Role) -> usize {
         // remove existing address if some exists
         if let Some(addr) = self.sessions.get(&ses_role.into()) {
             do_send_log(addr, "disconnected");
@@ -169,7 +167,7 @@ impl Handler<Connect> for RelayServer {
         // if publisher, id is specified by publisher, else gen new id
         let id: usize = match msg.ses_role {
             Role::Publisher(_) => {
-                self.connect_publisher(msg.clone());
+                self.connect_publisher(msg.ses_role);
                 msg.ses_role.into()
             }
             _ => self.rng.gen::<usize>(),
