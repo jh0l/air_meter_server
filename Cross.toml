@@ -1,2 +1,2 @@
-[target.arm-unknown-linux-gnueabihf]
-image = "zenria/cross:arm-rpi-4.9.3-linux-gnueabihf"
+[target.armv7-unknown-linux-gnueabihf]
+image = "cross:armv7-A.M.S-linux-gnueabihf"
