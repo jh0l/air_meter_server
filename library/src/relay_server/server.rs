@@ -34,6 +34,12 @@ fn do_send_log(addr: &actix::Recipient<Message>, message: &str) {
     }
 }
 
+/// Make actor from `RelaySever`
+impl Actor for RelayServer {
+    // Simple context
+    type Context = Context<Self>;
+}
+
 impl RelayServer {
     pub fn new(visitor_count: Arc<AtomicUsize>, actions: Addr<Actions>) -> RelayServer {
         // default subscription?
@@ -72,12 +78,6 @@ impl RelayServer {
         println!("[srv/m] {:?} PUBLISHER CONNECTED", ses_role);
         ses_role.into()
     }
-}
-
-/// Make actor from `RelaySever`
-impl Actor for RelayServer {
-    // Simple context
-    type Context = Context<Self>;
 }
 
 /// Handler for Connect message

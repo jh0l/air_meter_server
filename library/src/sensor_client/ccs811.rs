@@ -112,7 +112,7 @@ impl Sensor {
             Some(session) => match self.read() {
                 Ok(read) => {
                     let cmd = format!(
-                                "{{ \"eco2\": {} \"evtoc\":{} \"increment\":{} \"read_time\":{} \"start_time\":{} }}",
+                                "{{ \"eco2\": {}, \"evtoc\":{}, \"increment\":\"{}\", \"read_time\":{}, \"start_time\":{} }}",
                                 read.eco2, read.evtoc, read.increment, read.read_time, read.start_time
                             );
                     session.do_send(ReadingMsg(cmd));
