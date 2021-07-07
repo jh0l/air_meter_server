@@ -73,8 +73,8 @@ impl WsSession {
         match self.ses_role {
             Role::Publisher(pub_id) => match cmd {
                 "/reading" => {
-                    let reading = from_json::<Reading>(&msg)?;
-                    self.server_addr.do_send(PubMsg::<String> { msg, pub_id });
+                    let msg = from_json::<Reading>(&msg)?;
+                    self.server_addr.do_send(PubMsg::<Reading> { msg, pub_id });
                     Ok(())
                 }
                 _ => Err(format!("unrecognised command {}", cmd)),
@@ -170,7 +170,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsSession {
             ws::Message::Pong(_) => self.hb = Instant::now(),
             ws::Message::Text(text) => {
                 self.parse_message(&text, ctx).unwrap_or_else(|err| {
-                    ctx.text(err);
+                    ctx.text(&format!("COMMAND ERROR: {:?}", err));
                 });
             }
             ws::Message::Binary(_) => println!("[srv/s] Unexpected binary"),

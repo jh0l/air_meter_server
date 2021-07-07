@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate diesel;
+
 use std::time::Duration;
 
 /// How often heartbeat pings are sent
@@ -10,3 +13,7 @@ pub use sensor_client::SessionClient;
 
 pub mod relay_server;
 pub use relay_server::{server::RelayServer, ws_route};
+
+pub mod db;
+
+pub mod schema;

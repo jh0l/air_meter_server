@@ -1,4 +1,4 @@
-use library::{ws_route, RelayServer, SessionClient};
+use library::{db::Actions, ws_route, RelayServer, SessionClient};
 
 use actix::*;
 use std::sync::{atomic::AtomicUsize, Arc};
@@ -16,14 +16,19 @@ async fn greet(req: HttpRequest) -> impl Responder {
 async fn main() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "actix_server=info,actix_web=info");
     env_logger::init();
+    dotenv::dotenv().ok();
 
     // App State
     // keep count of visitors
     let app_state = Arc::new(AtomicUsize::new(0));
     // TODO track server uptime
 
+    // set up database connection pool
+    let connspec = std::env::var("DATABASE_URL").expect("DATABASE_URL");
+    let db_actions = Actions::new(&connspec).start();
+
     //start relay server actor
-    let server = RelayServer::new(app_state.clone()).start();
+    let server = RelayServer::new(app_state.clone(), db_actions).start();
 
     // initialize sqlite db if not already initialized
 

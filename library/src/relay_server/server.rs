@@ -3,16 +3,16 @@
 //! Publishing clients send messages to subscribed users through `RelayServer`.
 //! Each publisher has its own subscription, multiple users can connect to a single
 //! publisher's subscription
+use crate::db::Actions;
+use crate::relay_server::{
+    Connect, Disconnect, Join, ListSubs, Message, PublisherMessage, Reading, Role,
+};
 use actix::prelude::*;
 use rand::{rngs::ThreadRng, Rng};
 use std::collections::{HashMap, HashSet};
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
-};
-
-use crate::relay_server::{
-    Connect, Disconnect, Join, ListSubs, Message, PublisherMessage, Reading, Role,
 };
 
 /// `RelayServer` manages 'subscriptions'
@@ -25,6 +25,7 @@ pub struct RelayServer {
     subs: HashMap<usize, HashSet<usize>>,
     rng: ThreadRng,
     visitor_count: Arc<AtomicUsize>,
+    actions: Addr<Actions>,
 }
 
 fn do_send_log(addr: &actix::Recipient<Message>, message: &str) {
@@ -34,15 +35,14 @@ fn do_send_log(addr: &actix::Recipient<Message>, message: &str) {
 }
 
 impl RelayServer {
-    pub fn new(visitor_count: Arc<AtomicUsize>) -> RelayServer {
+    pub fn new(visitor_count: Arc<AtomicUsize>, actions: Addr<Actions>) -> RelayServer {
         // default subscription?
-        let subs = HashMap::new();
-
         RelayServer {
             sessions: HashMap::new(),
-            subs,
+            subs: HashMap::new(),
             rng: rand::thread_rng(),
             visitor_count,
+            actions,
         }
     }
 
@@ -120,27 +120,37 @@ impl Handler<Disconnect> for RelayServer {
 }
 
 /// Handler for Publisher message.
-impl Handler<PublisherMessage<String>> for RelayServer {
-    type Result = ();
+// impl Handler<PublisherMessage<String>> for RelayServer {
+//     type Result = ();
 
-    fn handle(&mut self, msg: PublisherMessage<String>, _: &mut Context<Self>) {
-        if let Some(sessions) = self.subs.get(&msg.pub_id) {
-            println!("[srv/m] {:?}", msg);
-            for user_id in sessions {
-                self.message_session(user_id, msg.msg.as_str());
-            }
-        } else {
-            println!("[srv/m] UNKNOWN PUBLISHER {}", msg.pub_id);
-        }
-    }
-}
+//     fn handle(&mut self, msg: PublisherMessage<String>, _: &mut Context<Self>) {
+//         if let Some(sessions) = self.subs.get(&msg.pub_id) {
+//             println!("[srv/m] {:?}", msg);
+//             for user_id in sessions {
+//                 self.message_session(user_id, msg.msg.as_str());
+//             }
+//         } else {
+//             println!("[srv/m] UNKNOWN PUBLISHER {}", msg.pub_id);
+//         }
+//     }
+// }
 
 /// Handler for Publisher message containing sensor reading
 impl Handler<PublisherMessage<Reading>> for RelayServer {
     type Result = ();
 
     fn handle(&mut self, msg: PublisherMessage<Reading>, _: &mut Context<Self>) {
-        // self.actions.insert_reading(msg.reading);
+        if let Some(sessions) = self.subs.get(&msg.pub_id) {
+            // send to db
+            self.actions.do_send(msg.clone());
+            // send to all subscribers
+            println!("[srv/m] {:?}", msg);
+            for user_id in sessions {
+                self.message_session(user_id, &format!("{:?}", msg.msg));
+            }
+        } else {
+            println!("[srv/m] UNKNOWN PUBLISHER {}", msg.pub_id);
+        }
     }
 }
 

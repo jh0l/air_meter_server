@@ -1,0 +1,9 @@
+CREATE TABLE readings (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  publisher_id BIGINT NOT NULL,
+  eco2  INTEGER NOT NULL,
+  evtoc  INTEGER NOT NULL,
+  read_time BIGINT NOT NULL,
+  start_time BIGINT NOT NULL,
+  increment TEXT NOT NULL
+)

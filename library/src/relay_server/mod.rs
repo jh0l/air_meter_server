@@ -55,7 +55,7 @@ pub struct Disconnect {
 }
 
 /// Send message to publishers subscribers
-#[derive(Message, Debug)]
+#[derive(Message, Debug, Clone)]
 #[rtype(result = "()")]
 pub struct PublisherMessage<T>
 where
@@ -68,7 +68,7 @@ where
 }
 
 /// Publisher reading
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Reading {
     pub eco2: u16,
     pub evtoc: u16,
