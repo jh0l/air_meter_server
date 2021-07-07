@@ -26,7 +26,7 @@ Then run `cross_deploy.sh` to compile, `scp` the `server` binary, and run it ove
 - [x] receive air_meter_node requests via websockets
   - [ ]  note - provision for db based config response for node (increment, restart)
 - [x] support websocket requests for air_meter
-- [ ] save air_meter readings to db accessable by users
+- [x] save air_meter readings to db accessable by users
 - [ ] serve web_client requests with Askama template
 - [ ] serve web_client with template that requests react_app
 - [ ] add to system startup (singleton)
