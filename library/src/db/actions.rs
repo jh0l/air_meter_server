@@ -71,6 +71,8 @@ impl Handler<PubMsg<Reading>> for Actions {
     }
 }
 
+embed_migrations!("../migrations");
+
 impl Actions {
     pub fn new(connspec: &str) -> Actions {
         let manager = ConnectionManager::<SqliteConnection>::new(connspec);
@@ -78,6 +80,8 @@ impl Actions {
             .build(manager)
             .expect("Failed to create pool.");
 
+        let conn = pool.get().unwrap();
+        embedded_migrations::run(&conn).unwrap();
         Actions { pool }
     }
 
