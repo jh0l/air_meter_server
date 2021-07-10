@@ -10,7 +10,7 @@ pub struct NewReading {
     pub increment: String,
 }
 
-#[derive(Queryable, Debug)]
+#[derive(Queryable, Debug, Clone)]
 // #[table_name = "readings"]
 pub struct DbReading {
     pub id: i32,

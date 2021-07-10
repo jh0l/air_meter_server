@@ -2,6 +2,9 @@ use actix::prelude::*;
 use actix_web::web;
 use diesel::prelude::*;
 use diesel::r2d2::ConnectionManager;
+use diesel::result::Error;
+
+use std::vec::Vec;
 
 use crate::{
     db::model::{DbReading, NewReading},
@@ -12,6 +15,15 @@ type DbPool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
 
 pub struct Actions {
     pool: DbPool,
+}
+
+#[derive(Clone, Debug, Queryable)]
+pub struct GetReadings {
+    pub limit: i64,
+}
+
+impl Message for GetReadings {
+    type Result = Vec<DbReading>;
 }
 
 impl Actor for Actions {
@@ -67,5 +79,11 @@ impl Actions {
             .expect("Failed to create pool.");
 
         Actions { pool }
+    }
+
+    fn conn(
+        &mut self,
+    ) -> r2d2::PooledConnection<diesel::r2d2::ConnectionManager<diesel::SqliteConnection>> {
+        self.pool.get().unwrap()
     }
 }

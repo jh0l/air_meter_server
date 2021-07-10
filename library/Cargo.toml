@@ -23,6 +23,8 @@ nb = "1"
 linux-embedded-hal = "0.3"
 embedded-ccs811 = "0.2.0"
 diesel = { version = "^1.4.7", features = ["sqlite", "r2d2", "numeric"] }
+diesel_migrations = "1.4.0"
 libsqlite3-sys = { version = "0.17.3", features = ["bundled"] }
 failure = "0.1.8"
 r2d2 = "0.8"
+askama = "0.9"

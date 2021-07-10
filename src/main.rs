@@ -1,6 +1,6 @@
-use library::{db::Actions, ws_route, RelayServer, SessionClient};
-
 use actix::*;
+
+use library::{db::Actions, templates, ws_route, RelayServer, SessionClient};
 use std::sync::{atomic::AtomicUsize, Arc};
 
 use actix_files as fs;
@@ -28,7 +28,7 @@ async fn main() -> std::io::Result<()> {
     let db_actions = Actions::new(&connspec).start();
 
     //start relay server actor
-    let server = RelayServer::new(app_state.clone(), db_actions).start();
+    let server = RelayServer::new(app_state.clone(), db_actions.clone()).start();
 
     // initialize sqlite db if not already initialized
 
@@ -44,10 +44,13 @@ async fn main() -> std::io::Result<()> {
             // relay_server
             .data(server.clone())
             .data(app_state.clone())
+            // db actions
+            .data(db_actions.clone())
             // websocket route
             .service(web::resource("/ws/").to(ws_route))
             // static files
-            .service(fs::Files::new("/", "static/").index_file("index.html"))
+            .service(fs::Files::new("/static/*", "static/").index_file("index.html"))
+            .service(web::resource("/").route(web::get().to(templates::index)))
     })
     // start http server on 127.0.0.1:8080
     .bind(ADDRESS)?

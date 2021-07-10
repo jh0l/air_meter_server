@@ -17,3 +17,5 @@ pub use relay_server::{server::RelayServer, ws_route};
 pub mod db;
 
 pub mod schema;
+
+pub mod templates;
