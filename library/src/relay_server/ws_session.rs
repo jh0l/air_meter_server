@@ -161,7 +161,6 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsSession {
             Ok(msg) => msg,
         };
 
-        println!("[srv/s] {:?}: {:?}", self.ses_role, msg);
         match msg {
             ws::Message::Ping(msg) => {
                 self.hb = Instant::now();

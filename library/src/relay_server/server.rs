@@ -144,7 +144,6 @@ impl Handler<PublisherMessage<Reading>> for RelayServer {
             // send to db
             self.actions.do_send(msg.clone());
             // send to all subscribers
-            println!("[srv/m] {:?}", msg);
             for user_id in sessions {
                 self.message_session(user_id, &format!("{:?}", msg.msg));
             }
