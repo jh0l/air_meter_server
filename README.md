@@ -33,9 +33,13 @@ Then run `cross_deploy.sh` to compile, `scp` the `server` binary, and run it ove
 - [ ] adjustable reading increment
 - [ ] visually indicate sensor warmup based on sensor uptime
 - [ ] change heartbeat to ~30 minutes - then indicate sensor client may have crashed based no heartbeat from client after 5 minutes
-## wifi hotspot config network
+## wifi hotspot config network (Captive Portal)
 - [ ] in factory config rasp pi starts with wifi hotspot with webpage for config
   - [ ] user joins rasp pi wifi - navigates to config webpage
   - [ ] enter wifi password - rasp pi will have to terminate hotspot then test wifi password
   - [ ] sensor client obtains authorization id and server address? 
   - [ ] use websockets to notify of success with ip of rasp pi on user's wifi (user will have to join orig wifi manually)
+## Captive Portal mode for sensor operation webapp
+- user can choose to access sensor app through captive portal instead of through existing local network
+  - mode can be chosen at config network or at sensor app
+  - https://raspberrypi.stackexchange.com/a/100118
