@@ -49,7 +49,7 @@ async fn main() -> std::io::Result<()> {
             // websocket route
             .service(web::resource("/ws/").to(ws_route))
             // static files
-            .service(fs::Files::new("/static/*", "static/").index_file("index.html"))
+            .service(fs::Files::new("/static", "./static").index_file("./static/404.html"))
             .service(web::resource("/").route(web::get().to(templates::index)))
     })
     // start http server on 127.0.0.1:8080
