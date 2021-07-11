@@ -110,8 +110,6 @@ impl Actor for WsSession {
         // start heartbeat with ws client
         self.hb(ctx);
 
-        // TODO determine whether ws client is publisher or subscriber
-
         // register self in relay server. `AsyncContext::wait` register's
         // future within context, but context waits until this future resolves
         // before processing any other events.
