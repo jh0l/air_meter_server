@@ -1,13 +1,23 @@
 # Air Quality Sensor API Server for Raspberry Pi
 
-_Get air quality readings over a local websocket connection._  
+_Over the Air Air Meters._
 <br />
 
 # Development
+## Prerequisites
+install `rustup` and `cargo` to use the rustlang platform
+
+## Run Server
+Keep in mind the sensor data will be placeholder values derived from unix time.
+You will need to build and pack the frontend to get interactivity in the site.
+```
+cargo run
+```
+
 
 ## Cross compilation
 
-### Prequisites
+### Prerequisites
 
 install `cross` (requires `docker`)
 
@@ -25,9 +35,9 @@ over `ssh`.
 
 ## Frontend
 
-Keep in mind you will need to build the fronte ned app too
+Keep in mind you will need to build the frontend app.
 
-### Prequisites
+### Prerequisites
 
 install `npx`, `node` and `npm`
 
@@ -80,3 +90,7 @@ run the `pack_site.sh` script or follow its commands - whatever works for you
     through existing local network
     -   mode can be chosen at config network or at sensor app
     -   https://raspberrypi.stackexchange.com/a/100118
+
+## Battery Power
+-   Display Battery levels and estimated lifetime for battery powered device
+-   save energy https://core-electronics.com.au/tutorials/disable-features-raspberry-pi.html
