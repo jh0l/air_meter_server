@@ -6,7 +6,7 @@ use askama::Template;
 #[derive(Template)]
 #[template(path = "index.html")]
 struct Index<'a> {
-    text: &'a str,
+    template_readout: &'a str,
 }
 
 pub async fn index(actions: web::Data<Addr<Actions>>) -> Result<HttpResponse> {
@@ -18,7 +18,7 @@ pub async fn index(actions: web::Data<Addr<Actions>>) -> Result<HttpResponse> {
         .await
         .unwrap();
     let s = Index {
-        text: &format!("{:?}", readings),
+        template_readout: &format!("{:?}", readings),
     }
     .render()
     .unwrap();

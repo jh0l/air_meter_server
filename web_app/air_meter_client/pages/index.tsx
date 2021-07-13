@@ -6,8 +6,8 @@ function Readout() {
         <>
             <h1
                 className={styles.title}
-                id="template_readout"
-            >{`{{template_readout}}`}</h1>
+                dangerouslySetInnerHTML={{__html: '{{template_readout}}'}}
+            ></h1>
         </>
     );
 }
