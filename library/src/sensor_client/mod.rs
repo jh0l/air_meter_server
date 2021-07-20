@@ -48,6 +48,7 @@ pub struct SessionClient {
 }
 
 pub struct Sensor {
+    pub_id: u64,
     app: Option<Ccs811Awake<I2cdev, mode::App>>,
     start_time: u64,
     increment: MeasurementMode,
