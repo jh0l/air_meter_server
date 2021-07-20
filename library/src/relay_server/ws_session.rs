@@ -69,7 +69,7 @@ impl WsSession {
         // parse command
         let v: Vec<&str> = m.splitn(2, ' ').collect();
         let cmd = v[0];
-        let msg = v[1].to_owned();
+        let msg = (if v.len() > 1 { v[1] } else { "" }).to_owned();
         match self.ses_role {
             Role::Publisher(pub_id) => match cmd {
                 "/reading" => {
