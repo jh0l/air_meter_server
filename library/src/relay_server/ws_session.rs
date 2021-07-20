@@ -62,9 +62,29 @@ impl WsSession {
         });
     }
 
+    //helper method that gets list of subs for client in json format
+    fn list_subs(&mut self, ctx: &mut ws::WebsocketContext<Self>) {
+        self.server_addr
+            .send(ListSubs {})
+            .into_actor(self)
+            .then(|res, _, ctx| {
+                match res {
+                    Ok(res) => ctx.text(format!("/list {:?}", res)),
+                    Err(err) => ctx.text(format!("{:?}", err)),
+                }
+                fut::ready(())
+            })
+            .wait(ctx);
+    }
+
     // helper method handles ws messages from client, parses msg then forwards
     // to appropriate relay server handler
-    fn parse_message(&self, text: &str, _: &mut ws::WebsocketContext<Self>) -> Result<(), String> {
+    fn parse_message(
+        &mut self,
+        text: &str,
+        ctx: &mut ws::WebsocketContext<Self>,
+    ) -> Result<(), String> {
+        println!("{:?}: {}", self.ses_role, text);
         let m = text.trim();
         // parse command
         let v: Vec<&str> = m.splitn(2, ' ').collect();
@@ -85,9 +105,8 @@ impl WsSession {
             },
             Role::Subscriber(ses_id) => match cmd {
                 "/join" => {
-                    let payload = from_json::<Join>(&msg)?;
-                    let Join { pub_id } = payload;
-                    self.server_addr.do_send(SubJoin { ses_id, pub_id });
+                "/list" => {
+                    self.list_subs(ctx);
                     Ok(())
                 }
                 _ => Err(format!("unrecognised command {}", cmd)),
