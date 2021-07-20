@@ -24,7 +24,7 @@ use serde_json::from_slice;
 #[rtype(result = "()")]
 pub struct Join {
     /// id of publisher client wants to subscribe to
-    pub pub_id: usize,
+    pub pub_id: u64,
 }
 
 pub struct WsSession {
@@ -188,7 +188,7 @@ pub async fn ws_route(
 ) -> Result<HttpResponse, Error> {
     let role: Result<Role, String> = match req.headers().get("authorization") {
         Some(auth) => match auth.to_str() {
-            Ok(ses_id_str) => match ses_id_str.parse::<usize>() {
+            Ok(ses_id_str) => match ses_id_str.parse::<u64>() {
                 Ok(ses_id) => Ok(Role::Publisher(ses_id)),
                 Err(err) => {
                     println!("[srv/s] {:?}", err);

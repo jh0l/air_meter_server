@@ -21,8 +21,8 @@ use std::sync::{
 /// subscriptions are a collectiono of users subscribed to publishers
 /// users are appended to subscriptions HashSet on joining
 pub struct RelayServer {
-    sessions: HashMap<usize, Recipient<Message>>,
-    subs: HashMap<usize, HashSet<usize>>,
+    sessions: HashMap<u64, Recipient<Message>>,
+    subs: HashMap<u64, HashSet<u64>>,
     rng: ThreadRng,
     visitor_count: Arc<AtomicUsize>,
     actions: Addr<Actions>,
@@ -52,7 +52,7 @@ impl RelayServer {
         }
     }
 
-    fn message_session(&self, session_id: &usize, message: &str) {
+    fn message_session(&self, session_id: &u64, message: &str) {
         if let Some(addr) = self.sessions.get(session_id) {
             do_send_log(addr, message);
         } else {
@@ -63,7 +63,7 @@ impl RelayServer {
     // Assign subscription entry to incoming address through publisher id
     // Create subscription entry if None
     // Will override previously assigned address if existant
-    fn connect_publisher(&mut self, ses_role: Role) -> usize {
+    fn connect_publisher(&mut self, ses_role: Role) -> u64 {
         // remove existing address if some exists
         if let Some(addr) = self.sessions.get(&ses_role.into()) {
             do_send_log(addr, "disconnected");
@@ -83,7 +83,7 @@ impl RelayServer {
 /// Handler for Connect message
 /// Register a new session and assign unique id to this session
 impl Handler<Connect> for RelayServer {
-    type Result = usize;
+    type Result = u64;
 
     fn handle(&mut self, msg: Connect, _: &mut Context<Self>) -> Self::Result {
         println!("[srv/m] {:?}", msg);
@@ -91,12 +91,12 @@ impl Handler<Connect> for RelayServer {
         self.visitor_count.fetch_add(1, Ordering::SeqCst);
 
         // if publisher, id is specified by publisher, else gen new id
-        let id: usize = match msg.ses_role {
+        let id: u64 = match msg.ses_role {
             Role::Publisher(_) => {
                 self.connect_publisher(msg.ses_role);
                 msg.ses_role.into()
             }
-            _ => self.rng.gen::<usize>(),
+            _ => self.rng.gen::<u64>(),
         };
         self.sessions.insert(id, msg.addr);
         id
