@@ -9,7 +9,7 @@ use actix_web_actors::ws;
 use crate::{
     relay_server,
     relay_server::{
-        server::RelayServer, Join as SubJoin, PublisherMessage as PubMsg, Reading, Role,
+        server::RelayServer, Join, ListSubs, PublisherMessage as PubMsg, Reading, Role,
     },
 };
 
@@ -22,7 +22,7 @@ use serde_json::from_slice;
 /// Subscribe to publisher
 #[derive(Message, Debug, Deserialize, Serialize)]
 #[rtype(result = "()")]
-pub struct Join {
+pub struct WsJoin {
     /// id of publisher client wants to subscribe to
     pub pub_id: u64,
 }
