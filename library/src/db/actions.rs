@@ -3,10 +3,8 @@ use diesel::prelude::*;
 use diesel::r2d2::ConnectionManager;
 use diesel::result::Error;
 
-use std::vec::Vec;
-
 use crate::{
-    db::model::{DbReading, NewReading},
+    db::model::{DbReading, GetReadings, NewReading},
     relay_server::{PublisherMessage as PubMsg, Reading},
 };
 
@@ -14,15 +12,6 @@ type DbPool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
 
 pub struct Actions {
     pool: DbPool,
-}
-
-#[derive(Clone, Debug, Queryable)]
-pub struct GetReadings {
-    pub limit: i64,
-}
-
-impl Message for GetReadings {
-    type Result = Vec<DbReading>;
 }
 
 impl Actor for Actions {
@@ -70,7 +59,7 @@ impl Handler<GetReadings> for Actions {
         use crate::schema::readings::dsl::*;
         MessageResult(
             readings
-                .order(id.desc())
+                .order(read_time.desc())
                 .limit(msg.limit)
                 .load::<DbReading>(&self.conn())
                 .unwrap(),

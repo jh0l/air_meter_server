@@ -1,4 +1,4 @@
-use crate::db::actions::{Actions, GetReadings};
+use crate::db::{actions::Actions, model::GetReadings};
 use actix::prelude::*;
 use actix_web::{web, HttpResponse, Result};
 use askama::Template;
@@ -14,7 +14,11 @@ pub async fn index(actions: web::Data<Addr<Actions>>) -> Result<HttpResponse> {
     // INSERT DATA INTO TEMPLATE
     let readings = actions
         .get_ref()
-        .send(GetReadings { limit: 1 })
+        .send(GetReadings {
+            limit: 1,
+            pub_id: 811,
+            before: None,
+        })
         .await
         .unwrap();
     let s = Index {

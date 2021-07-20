@@ -1,4 +1,6 @@
 use crate::schema::readings;
+use actix::prelude::Message;
+
 #[derive(Insertable, Debug)]
 #[table_name = "readings"]
 pub struct NewReading {
@@ -20,4 +22,15 @@ pub struct DbReading {
     pub read_time: i64,
     pub start_time: i64,
     pub increment: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct GetReadings {
+    pub pub_id: u64,
+    pub before: Option<u64>,
+    pub limit: i64,
+}
+
+impl Message for GetReadings {
+    type Result = Vec<DbReading>;
 }
