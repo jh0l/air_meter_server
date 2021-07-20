@@ -1,5 +1,22 @@
 import Head from 'next/head';
+import React, {useCallback} from 'react';
+import {useRecoilState, useRecoilValue} from 'recoil';
+import {publisherList, subscribedData} from '../lib/hooks/useWebsockets';
+import RelayWS from '../lib/WebSocket';
 import styles from '../styles/Home.module.css';
+
+const isProd = process.env.NODE_ENV === 'production';
+
+function Subscribe({deviceId}: {deviceId: number}) {
+    return (
+        <button
+            onClick={() => RelayWS.sendJoin(deviceId)}
+            className="px-4 py-2 font-medium tracking-wide text-white capitalize transition-colors duration-200 transform bg-blue-600 rounded-md dark:bg-gray-800 hover:bg-blue-500 dark:hover:bg-gray-700 focus:outline-none focus:bg-blue-500 dark:focus:bg-gray-700"
+        >
+            Subscribe
+        </button>
+    );
+}
 
 function Readout() {
     return (
@@ -11,7 +28,31 @@ function Readout() {
         </>
     );
 }
-const isProd = process.env.NODE_ENV === 'production';
+function DeviceCard({deviceId}: {deviceId: number}) {
+    const data = useRecoilValue(subscribedData(deviceId));
+    return (
+        <div className={styles.grid}>
+            <h2>Id: {deviceId}</h2>
+            {data !== null && (
+                <>
+                    <pre>{data}</pre>
+                </>
+            )}
+            {data === null && <Subscribe deviceId={deviceId} />}
+        </div>
+    );
+}
+
+function DeviceGrid() {
+    const list = useRecoilValue(publisherList);
+    return (
+        <>
+            {list.map((id) => (
+                <DeviceCard key={id} deviceId={id} />
+            ))}
+        </>
+    );
+}
 
 export default function Home() {
     return (
@@ -29,9 +70,9 @@ export default function Home() {
             </Head>
 
             <main className={styles.main}>
-                <Readout />
-
+                <h2>Devices</h2>
                 <div className={styles.grid}>
+                    <DeviceGrid />
                     <br />
                 </div>
             </main>
