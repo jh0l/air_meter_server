@@ -51,8 +51,9 @@ impl Handler<TakeReading> for Sensor {
 }
 
 impl Sensor {
-    pub fn new(mode: MeasurementMode) -> Result<Sensor, ()> {
+    pub fn new(pub_id: u64, mode: MeasurementMode) -> Result<Sensor, ()> {
         Sensor {
+            pub_id,
             app: None,
             start_time: now_secs(),
             increment: mode,
@@ -61,8 +62,8 @@ impl Sensor {
         .load_sensor()
     }
 
-    pub fn new_1s() -> Result<Sensor, ()> {
-        Sensor::new(MeasurementMode::ConstantPower1s)
+    pub fn new_1s(pub_id: u64) -> Result<Sensor, ()> {
+        Sensor::new(pub_id, MeasurementMode::ConstantPower1s)
     }
 
     #[cfg(target_arch = "arm")]
@@ -112,8 +113,8 @@ impl Sensor {
             Some(session) => match self.read() {
                 Ok(read) => {
                     let cmd = format!(
-                                "{{ \"eco2\": {}, \"evtoc\":{}, \"increment\":\"{}\", \"read_time\":{}, \"start_time\":{} }}",
-                                read.eco2, read.evtoc, read.increment, read.read_time, read.start_time
+                                "{{ \"pub_id\": {}, \"eco2\": {}, \"evtoc\":{}, \"increment\":\"{}\", \"read_time\":{}, \"start_time\":{} }}",
+                                self.pub_id, read.eco2, read.evtoc, read.increment, read.read_time, read.start_time
                             );
                     session.do_send(ReadingMsg(cmd));
                 }
