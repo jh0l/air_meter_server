@@ -105,6 +105,11 @@ impl WsSession {
             },
             Role::Subscriber(ses_id) => match cmd {
                 "/join" => {
+                    let payload = from_json::<WsJoin>(&msg)?;
+                    let WsJoin { pub_id } = payload;
+                    self.server_addr.do_send(Join { ses_id, pub_id });
+                    Ok(())
+                }
                 "/list" => {
                     self.list_subs(ctx);
                     Ok(())
