@@ -142,16 +142,11 @@ impl Handler<ListSubs> for RelayServer {
     type Result = MessageResult<ListSubs>;
 
     fn handle(&mut self, _: ListSubs, _: &mut Context<Self>) -> Self::Result {
-        let mut subs = Vec::new();
-
-        for key in self.subs.keys() {
-            subs.push(key.to_owned());
-        }
-
-        MessageResult(subs)
+        MessageResult(self.subs.keys().cloned().collect())
     }
 }
 
+/// Handler for subscribing to publisher
 impl Handler<Join> for RelayServer {
     type Result = ();
 
