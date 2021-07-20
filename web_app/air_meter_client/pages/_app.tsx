@@ -1,7 +1,20 @@
-import '../styles/globals.css'
-import type { AppProps } from 'next/app'
+import '../styles/globals.css';
+import 'tailwindcss/tailwind.css';
+import type {AppProps} from 'next/app';
+import useWebsocket from '../lib/hooks/useWebsockets';
+import {RecoilRoot} from 'recoil';
 
-function MyApp({ Component, pageProps }: AppProps) {
-  return <Component {...pageProps} />
+function UseWebsockets() {
+    useWebsocket();
+    return null;
 }
-export default MyApp
+
+function MyApp({Component, pageProps}: AppProps) {
+    return (
+        <RecoilRoot>
+            <UseWebsockets />
+            <Component {...pageProps} />;
+        </RecoilRoot>
+    );
+}
+export default MyApp;
