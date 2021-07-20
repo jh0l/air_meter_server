@@ -129,7 +129,7 @@ impl Handler<PublisherMessage<Reading>> for RelayServer {
             self.actions.do_send(msg.clone());
             // send to all subscribers
             for user_id in sessions {
-                self.message_session(user_id, &format!("{:?}", msg.msg));
+                self.message_session(user_id, &format!("/reading {}", msg.json));
             }
         } else {
             println!("[srv/m] UNKNOWN PUBLISHER {}", msg.pub_id);
@@ -162,12 +162,12 @@ impl Handler<Join> for RelayServer {
             .get_mut(&pub_id)
             .map(|subs| if subs.insert(ses_id) { Some(()) } else { None })
             .map(|_| {
-                self.message_session(&ses_id, &format!("joined {}", pub_id));
+                self.message_session(&ses_id, &format!("/msg joined {}", pub_id));
                 Some(())
             })
             .or_else(|| {
                 // TODO add reason for failure
-                self.message_session(&ses_id, &format!("failed to join {}", pub_id));
+                self.message_session(&ses_id, &format!("/err failed to join {}", pub_id));
                 None
             });
     }
