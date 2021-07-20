@@ -119,22 +119,6 @@ impl Handler<Disconnect> for RelayServer {
     }
 }
 
-/// Handler for Publisher message.
-// impl Handler<PublisherMessage<String>> for RelayServer {
-//     type Result = ();
-
-//     fn handle(&mut self, msg: PublisherMessage<String>, _: &mut Context<Self>) {
-//         if let Some(sessions) = self.subs.get(&msg.pub_id) {
-//             println!("[srv/m] {:?}", msg);
-//             for user_id in sessions {
-//                 self.message_session(user_id, msg.msg.as_str());
-//             }
-//         } else {
-//             println!("[srv/m] UNKNOWN PUBLISHER {}", msg.pub_id);
-//         }
-//     }
-// }
-
 /// Handler for Publisher message containing sensor reading
 impl Handler<PublisherMessage<Reading>> for RelayServer {
     type Result = ();
