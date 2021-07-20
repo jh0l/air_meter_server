@@ -136,7 +136,7 @@ impl SessionClient {
         let server_url = &(*server_url);
         Arbiter::spawn(async move {
             // thread spawn a ccs811 Sensor actor using SyncArbiter with access to session addr
-            let sensor_add = SyncArbiter::start(1, || Sensor::new_1s().unwrap());
+            let sensor_add = SyncArbiter::start(1, || Sensor::new_1s(811).unwrap());
             let mut url = "http://".to_owned();
             url.push_str(server_url);
             url.push_str("/ws/");
