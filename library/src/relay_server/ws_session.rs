@@ -73,8 +73,12 @@ impl WsSession {
         match self.ses_role {
             Role::Publisher(pub_id) => match cmd {
                 "/reading" => {
-                    let msg = from_json::<Reading>(&msg)?;
-                    self.server_addr.do_send(PubMsg::<Reading> { msg, pub_id });
+                    let msg_des = from_json::<Reading>(&msg)?;
+                    self.server_addr.do_send(PubMsg::<Reading> {
+                        msg: msg_des,
+                        pub_id,
+                        json: msg,
+                    });
                     Ok(())
                 }
                 _ => Err(format!("unrecognised command {}", cmd)),
