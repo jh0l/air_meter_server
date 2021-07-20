@@ -18,16 +18,16 @@ function Subscribe({deviceId}: {deviceId: number}) {
     );
 }
 
-function Readout() {
-    return (
-        <>
-            <h1
-                className={styles.title}
-                dangerouslySetInnerHTML={{__html: '{{template_readout}}'}}
-            ></h1>
-        </>
-    );
+function LoadMore() {
+    // cursor atom list contains read_time of first reading received from /reading msgs i.e "start_time|+"
+    // that cursor + pub_id accesses atomFamily appended to from /reading msgs
+    // this button requests load history before "start_time|+"
+    // cursor of response appended to cursor atom list, data added to atomFamily
+    // access atom list of cursors based on range i.e "start_time|end_time"[]
+    // DeviceCard iterates over cursors, displaying cursors with data
+    return <button>Load More</button>;
 }
+
 function DeviceCard({deviceId}: {deviceId: number}) {
     const data = useRecoilValue(subscribedData(deviceId));
     return (
@@ -35,6 +35,7 @@ function DeviceCard({deviceId}: {deviceId: number}) {
             <h2>Id: {deviceId}</h2>
             {data !== null && (
                 <>
+                    <LoadMore />
                     <pre>{data}</pre>
                 </>
             )}
