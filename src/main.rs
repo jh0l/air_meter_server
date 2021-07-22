@@ -1,11 +1,13 @@
 use actix::*;
 use actix_cors::Cors;
 
-use library::{db::Actions, templates, ws_route, RelayServer, SessionClient};
+use library::{
+    db::Actions, rest_api::rest_config, templates, ws_route, RelayServer, SessionClient,
+};
 use std::sync::{atomic::AtomicUsize, Arc};
 
 use actix_files as fs;
-use actix_web::{middleware, web, App, HttpRequest, HttpServer, Responder};
+use actix_web::{http::header, middleware, web, App, HttpRequest, HttpServer, Responder};
 
 const ADDRESS: &str = "0.0.0.0:8080";
 async fn greet(req: HttpRequest) -> impl Responder {
@@ -59,6 +61,8 @@ async fn main() -> std::io::Result<()> {
             .data(db_actions.clone())
             // websocket route
             .service(web::resource("/ws/").to(ws_route))
+            // confiure REST api
+            .configure(rest_config)
             // static files
             .service(fs::Files::new("/static", "./static").index_file("./static/404.html"))
             .service(web::resource("/").route(web::get().to(templates::index)))
