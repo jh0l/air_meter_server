@@ -1,11 +1,12 @@
 import {useEffect} from 'react';
+import {atom, DefaultValue, selector, useSetRecoilState} from 'recoil';
 import {
-    atom,
-    atomFamily,
-    DefaultValue,
-    selector,
-    useSetRecoilState,
-} from 'recoil';
+    latestReadout,
+    earliestReadTime,
+    publisherList,
+    Reading,
+    readingRangesList,
+} from '../state/sensors';
 import RelayWS from '../WebSocket';
 
 /// helper fn for splitting string by seperator once
@@ -13,17 +14,6 @@ function splitCmd(s: string) {
     const i = s.indexOf(' ');
     return [s.slice(0, i), s.slice(i + 1)];
 }
-
-export const subscribedData = atomFamily<string | null, number>({
-    key: 'subscribedData_v1',
-    default: null,
-});
-
-export const publisherList = atom({
-    key: 'publisherList_v1',
-    default: [] as number[],
-});
-
 interface Message {
     type: '/msg' | '/err' | string;
     text: string;
@@ -39,16 +29,23 @@ export const messageArchive = atom({
     default: [] as Message[],
 });
 
-export const subscribedDataHandler = selector<string>({
+export const newReadingHandler = selector<string>({
     key: 'readingListHandler_v1',
-    set: ({set}, msg) => {
+    set: ({set, get}, msg) => {
         if (msg instanceof DefaultValue) throw Error('not implemented');
         const [_, data] = splitCmd(msg);
-        const reading = JSON.parse(data);
-        set(subscribedData(reading.pub_id), msg);
+        const reading = JSON.parse(data) as Reading;
+        const cursor = `${reading.pub_id}|live`;
+        if (get(earliestReadTime(reading.pub_id)) === null) {
+            set(earliestReadTime(reading.pub_id), reading.read_time);
+        }
+        set(readingRangesList(cursor), (cur) =>
+            cur === null ? [reading] : [...cur, reading]
+        );
+        set(latestReadout(reading.pub_id), reading);
     },
     get: () => {
-        throw Error('use subscribedData atom directly');
+        throw Error('use latestReadout atom directly');
     },
 });
 
@@ -88,7 +85,7 @@ export const publisherListHandler = selector<string>({
 
 const useWebsocket = () => {
     const setPublisherList = useSetRecoilState(publisherListHandler);
-    const setReadingList = useSetRecoilState(subscribedDataHandler);
+    const setReadingList = useSetRecoilState(newReadingHandler);
     const setMsgList = useSetRecoilState(messageListHandler);
     useEffect(() => {
         if (RelayWS.ws != null) throw Error('Reinitialising Websocket!');
