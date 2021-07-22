@@ -1,4 +1,5 @@
 use actix::*;
+use actix_cors::Cors;
 
 use library::{db::Actions, templates, ws_route, RelayServer, SessionClient};
 use std::sync::{atomic::AtomicUsize, Arc};
