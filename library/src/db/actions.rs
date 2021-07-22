@@ -4,7 +4,8 @@ use diesel::r2d2::ConnectionManager;
 use diesel::result::Error;
 
 use crate::{
-    db::model::{DbReading, GetReadings, NewReading},
+    common::GetReadings,
+    db::model::{DbReading, NewReading},
     relay_server::{PublisherMessage as PubMsg, Reading},
 };
 

@@ -1,4 +1,4 @@
-use crate::db::{actions::Actions, model::GetReadings};
+use crate::{common::GetReadings, db::actions::Actions};
 use actix::prelude::*;
 use actix_web::{web, HttpResponse, Result};
 use askama::Template;
