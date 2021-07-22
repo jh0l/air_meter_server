@@ -53,18 +53,23 @@ impl Handler<PubMsg<Reading>> for Actions {
     }
 }
 
+/// gets latest readings and returns them in ascending order by read_time
+/// can select only latest readings before a certain read_time
 impl Handler<GetReadings> for Actions {
     type Result = MessageResult<GetReadings>;
 
     fn handle(&mut self, msg: GetReadings, _: &mut Context<Self>) -> Self::Result {
         use crate::schema::readings::dsl::*;
-        MessageResult(
-            readings
-                .order(read_time.desc())
-                .limit(msg.limit)
-                .load::<DbReading>(&self.conn())
-                .unwrap(),
-        )
+        let query = readings.order(read_time.desc()).limit(msg.limit as i64);
+        let result;
+        if let Some(before) = msg.before {
+            result = query
+                .filter(read_time.lt(before as i64))
+                .load::<DbReading>(&self.conn());
+        } else {
+            result = query.load::<DbReading>(&self.conn());
+        }
+        MessageResult(result.unwrap())
     }
 }
 
