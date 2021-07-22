@@ -54,16 +54,11 @@ export const readingRangesList = atomFamily<null | Reading[], string>({
 export function useSensorReadingsAPI() {
     return useRecoilCallback(
         ({snapshot, set}) =>
-            async ({
-                pubId,
-                limit,
-                readTime,
-            }: {
-                pubId: number;
-                limit: number;
-                readTime: number;
-            }) => {
+            async ({pubId, limit}: {pubId: number; limit: number}) => {
                 if (!API_ADDRESS) throw Error('no API ADDRESS');
+                const readTime = await snapshot.getPromise(
+                    earliestReadTime(pubId)
+                );
                 if (readTime === null) throw Error('no readings for ' + pubId);
                 const cursor = `${pubId}|${readTime}|${limit}`;
                 const existing = await snapshot.getPromise(

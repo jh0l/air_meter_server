@@ -25,28 +25,83 @@ function Subscribe({deviceId}: {deviceId: number}) {
     );
 }
 
-function LoadMore() {
-    // cursor atom list contains read_time of first reading received from /reading msgs i.e "start_time|+"
-    // that cursor + pub_id accesses atomFamily appended to from /reading msgs
-    // this button requests load history before "start_time|+"
-    // cursor of response appended to cursor atom list, data added to atomFamily
-    // access atom list of cursors based on range i.e "start_time|end_time"[]
-    // DeviceCard iterates over cursors, displaying cursors with data
-    return <button>Load More</button>;
+function LoadMore({pubId, limit}: {pubId: number; limit: number}) {
+    const loadMore = useSensorReadingsAPI();
+    return (
+        <button
+            onClick={() => loadMore({pubId, limit})}
+            className="px-4 py-2 font-medium tracking-wide text-white capitalize transition-colors duration-200 transform bg-blue-600 rounded-md dark:bg-gray-800 hover:bg-blue-500 dark:hover:bg-gray-700 focus:outline-none focus:bg-blue-500 dark:focus:bg-gray-700"
+        >
+            Load More
+        </button>
+    );
+}
+
+function ReadingRange({
+    cursor,
+    rev,
+}: {
+    cursor: string;
+    rev?: boolean;
+}): JSX.Element {
+    const data = useRecoilValue(readingRangesList(cursor));
+    if (!data || data.length < 1) return <div>{cursor}: No Data</div>;
+    return (
+        <div>
+            <div>cursor: {cursor}</div>
+            {data.reduce(
+                (acc, read) => [
+                    ...(!rev ? acc : []),
+                    <div key={read.read_time}>{JSON.stringify(read)}</div>,
+                    ...(rev ? acc : []),
+                ],
+                [] as JSX.Element[]
+            )}
+        </div>
+    );
+}
+
+function Timeline({pubId}: {pubId: number}) {
+    const cursors = useRecoilValue(readingCursorSet(pubId));
+    const segmentMap = useMemo(() => {
+        const segments = [] as JSX.Element[];
+        cursors.forEach((cursor) => {
+            console.log(cursor);
+            segments.push(<ReadingRange key={cursor} cursor={cursor} rev />);
+        });
+        return segments;
+    }, [cursors]);
+    return <div>{segmentMap}</div>;
+}
+
+function Readout({
+    deviceId,
+    setData,
+}: {
+    deviceId: number;
+    setData: (b: boolean) => void;
+}) {
+    const data = useRecoilValue(latestReadout(deviceId));
+    useEffect(() => {
+        if (data) setData(true);
+    }, [data, setData]);
+    return <div>{JSON.stringify(data)}</div>;
 }
 
 function DeviceCard({deviceId}: {deviceId: number}) {
-    const data = useRecoilValue(subscribedData(deviceId));
+    const [hasData, setData] = useState(false);
     return (
         <div className={styles.grid}>
             <h2>Id: {deviceId}</h2>
-            {data !== null && (
+            <Readout deviceId={deviceId} setData={setData} />
+            {hasData && (
                 <>
-                    <LoadMore />
-                    <pre>{data}</pre>
+                    <Timeline pubId={deviceId} />
+                    <LoadMore pubId={deviceId} limit={30} />
                 </>
             )}
-            {data === null && <Subscribe deviceId={deviceId} />}
+
+            {!hasData && <Subscribe deviceId={deviceId} />}
         </div>
     );
 }
