@@ -7,13 +7,19 @@ _Over the Air Air Meters._
 ## Prerequisites
 install `rustup` and `cargo` to use the rustlang platform
 
+## Dev Frontend
+The frontend is compiled statically from a nextjs app. During development you can run the nextjs development server for hotreloading. localhost:3000 is allowed through the API server's Cors setup for development.
+```
+npm run dev
+```
+By default the API server has a html template that loads the frontend javascript when available. You will need to build and pack the frontend to get interactivity in the site when accessing the site from the API server which is covered in `Prod Frontend` below. this will need to done before `cross_deploy`.
+
 ## Run Server
-Keep in mind the sensor data will be placeholder values derived from unix time.
-You will need to build and pack the frontend to get interactivity in the site.
+During development the sensor data will be placeholder values derived from unix time.
 ```
 cargo run
 ```
-
+Compiling on arm architecture will activate the production sensor code
 
 ## Cross compilation
 
@@ -33,7 +39,7 @@ your device. Make sure the target and source paths are valid too.
 Then run `cross_deploy.sh` to compile, `scp` the `server` binary, and run it
 over `ssh`.
 
-## Frontend
+## Prod Frontend
 
 Keep in mind you will need to build the frontend app.
 
